@@ -56,23 +56,59 @@
 
     .calc-layout {
       display: flex;
-      gap: 24px;
+      gap: 20px;
       width: 100%;
-      max-width: 1060px;
+      max-width: 1280px;
       align-items: flex-start;
+    }
+
+    .calc-quote {
+      flex-shrink: 0;
+      width: fit-content;
+      min-width: 180px;
+      position: sticky;
+      top: 74px;
     }
 
     .calc-left {
       flex: 1;
       min-width: 0;
-      max-width: 600px;
+      max-width: 560px;
     }
 
     .calc-right {
-      width: 300px;
+      width: 260px;
       flex-shrink: 0;
       position: sticky;
       top: 74px;
+    }
+
+    .quote-title {
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      color: #bbb;
+      margin-bottom: 14px;
+    }
+
+    .quote-line {
+      font-size: 0.85rem;
+      color: #1a1a1a;
+      line-height: 1.7;
+      white-space: nowrap;
+    }
+
+    .quote-empty {
+      font-size: 0.82rem;
+      color: #ccc;
+      text-align: center;
+      padding: 20px 0;
+    }
+
+    .quote-copy-btn {
+      width: 100%;
+      margin-top: 16px;
     }
 
     .card {
@@ -331,8 +367,22 @@
 <div id="page-calculator" class="page active">
   <div class="calc-layout">
 
+    <div class="calc-quote">
+      <div class="card">
+        <div class="quote-title">Quote</div>
+        <div id="quote-content">
+          <div class="quote-empty">Fill in the form to generate a quote.</div>
+        </div>
+        <button class="btn btn-outline btn-sm quote-copy-btn" onclick="copyQuote()">Copy Quote</button>
+      </div>
+    </div>
+
     <div class="calc-left">
       <div class="card">
+        <div class="form-group">
+          <label class="field-label" for="project-name">Project Name <span style="color:#bbb;font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></label>
+          <input type="text" id="project-name" placeholder="e.g. ABC Company Brochure" oninput="updateQuote()" />
+        </div>
         <div class="form-group">
           <label class="field-label" for="product-select">Product</label>
           <select id="product-select">
@@ -381,7 +431,7 @@
         <div class="price-display">
           <div class="price-label">Suggested Selling Price</div>
           <div class="price-value" id="price-output">—</div>
-          <div class="price-note"  id="price-note">Paper×1.5 + Print×2 + Folding + $10 setup</div>
+          <div class="price-note"  id="price-note"></div>
         </div>
       </div>
     </div>
@@ -597,7 +647,7 @@ const PRODUCTS = {
           { id: 'closed_size', label: 'Closed Size',       type: 'size',   ids: ['closed_w', 'closed_h'] },
           { id: 'colours',     label: 'Number of Colours', type: 'radio',  options: ['1', '4'] },
           { id: 'sides',       label: 'Printing Sides',    type: 'radio',  options: ['0', '1', '2'] },
-          { id: 'lamination',  label: 'Lamination',        type: 'select', options: ['None', 'Normal 1 side', 'Normal 2 side'] },
+          { id: 'lam_pair', type: 'lam-pair' },
           { id: 'folding',     label: 'Folding',           type: 'select', options: ['None', '1 fold', '2 fold'] },
         ]
       }
@@ -722,6 +772,31 @@ function renderField(f) {
           </div>
         </div>`;
 
+    case 'lam-pair':
+      return `
+        <div class="form-group">
+          <label class="field-label">Lamination</label>
+          <div class="form-row">
+            <div>
+              <div class="sub-label">Type</div>
+              <select id="lam_type" onchange="calculatePrice()">
+                <option value="">— Select —</option>
+                <option value="Gloss">Gloss</option>
+                <option value="Matt">Matt</option>
+              </select>
+            </div>
+            <div>
+              <div class="sub-label">Sides</div>
+              <select id="lamination" onchange="calculatePrice()">
+                <option value="">— Select —</option>
+                <option value="None">None</option>
+                <option value="1 side">1 side</option>
+                <option value="2 sides">2 sides</option>
+              </select>
+            </div>
+          </div>
+        </div>`;
+
     case 'bleed-input':
       return `
         <div class="form-group">
@@ -768,6 +843,7 @@ function renderCalculatorForm(key) {
 
   document.getElementById('product-form').innerHTML = html;
   document.getElementById('calc-rows').style.display = key === 'brochure' ? '' : 'none';
+  updateQuote();
 }
 
 function refreshCalculatorPaperDropdowns() {
@@ -784,7 +860,7 @@ document.getElementById('product-select').addEventListener('change', function ()
 
 function calculatePrice() {
   const product = document.getElementById('product-select').value;
-  if (product !== 'brochure') return;
+  if (product !== 'brochure') { updateQuote(); return; }
 
   const upsEl       = document.getElementById('ups-output');
   const sheetsEl    = document.getElementById('sheets-output');
@@ -794,7 +870,7 @@ function calculatePrice() {
   const foldCostEl  = document.getElementById('folding-cost-output');
   const totalCostEl = document.getElementById('total-cost-output');
   const priceOutEl  = document.getElementById('price-output');
-  if (!upsEl) return;
+  if (!upsEl) { updateQuote(); return; }
 
   const reset = () => {
     [upsEl, sheetsEl, paperCostEl, printCostEl, lamCostEl, foldCostEl, totalCostEl, priceOutEl]
@@ -807,10 +883,10 @@ function calculatePrice() {
   const openH   = parseFloat(document.getElementById('open_h')?.value) || 0;
   const bleed   = parseFloat(document.getElementById('bleed')?.value)  || 0;
 
-  if (!paperId || !openW || !openH) { reset(); return; }
+  if (!paperId || !openW || !openH) { reset(); updateQuote(); return; }
 
   const paper = papers.find(p => p.id === paperId);
-  if (!paper) { reset(); return; }
+  if (!paper) { reset(); updateQuote(); return; }
 
   const pieceW = openW + bleed * 2;
   const pieceH = openH + bleed * 2;
@@ -839,8 +915,8 @@ function calculatePrice() {
 
     // Lamination cost
     const lamination = document.getElementById('lamination')?.value;
-    const lamRate    = lamination === 'Normal 1 side' ? 0.05
-                     : lamination === 'Normal 2 side' ? 0.10 : null;
+    const lamRate    = lamination === '1 side' ? 0.05
+                     : lamination === '2 sides' ? 0.10 : null;
     const lamCost    = lamRate !== null ? sheets * lamRate : 0;
     lamCostEl.textContent = lamRate !== null ? lamCost.toFixed(2) : '—';
 
@@ -861,6 +937,88 @@ function calculatePrice() {
     [sheetsEl, paperCostEl, printCostEl, lamCostEl, foldCostEl, totalCostEl, priceOutEl]
       .forEach(el => { el.textContent = '—'; });
   }
+  updateQuote();
+}
+
+// ─── Quote builder ────────────────────────────────────────────────────────────
+function updateQuote() {
+  const quoteEl = document.getElementById('quote-content');
+  if (!quoteEl) return;
+
+  const product     = document.getElementById('product-select').value;
+  const projectName = document.getElementById('project-name')?.value.trim() || '';
+
+  if (!product) {
+    quoteEl.innerHTML = '<div class="quote-empty">Fill in the form to generate a quote.</div>';
+    return;
+  }
+
+  if (product === 'brochure') {
+    const openW   = document.getElementById('open_w')?.value   || '';
+    const openH   = document.getElementById('open_h')?.value   || '';
+    const closedW = document.getElementById('closed_w')?.value || '';
+    const closedH = document.getElementById('closed_h')?.value || '';
+    const qty     = document.getElementById('qty')?.value      || '';
+
+    const colours = parseInt(document.querySelector('input[name="colours"]:checked')?.value) || 0;
+    const sides   = parseInt(document.querySelector('input[name="sides"]:checked')?.value)   || 0;
+    let colourStr = '';
+    if (sides === 0)      colourStr = 'N.A.';
+    else if (sides === 1) colourStr = `${colours}C x 0C`;
+    else if (sides === 2) colourStr = `${colours}C x ${colours}C`;
+
+    const lamType    = document.getElementById('lam_type')?.value   || '';
+    const lamination = document.getElementById('lamination')?.value || '';
+    const lamStr     = (lamination && lamination !== 'None' && lamination !== '')
+                       ? `${lamType} ${lamination}`.trim() : 'None';
+
+    const folding = document.getElementById('folding')?.value || '';
+    const price   = document.getElementById('price-output')?.textContent || '—';
+
+    const heading = `<strong><u>${projectName ? projectName + ' ' : ''}Brochure</u></strong>`;
+    const lines   = [
+      heading,
+      openW && openH   ? `Open Size: ${openW}mm x ${openH}mm`     : '',
+      closedW && closedH ? `Closed Size: ${closedW}mm x ${closedH}mm` : '',
+      colourStr          ? `Colour: ${colourStr}`                   : '',
+      `Lamination: ${lamStr}`,
+      folding            ? `Folding: ${folding}`                    : '',
+      qty                ? `Quantity: ${qty}`                       : '',
+      price !== '—'      ? `Price: $${price}`                       : '',
+    ].filter(Boolean);
+
+    quoteEl.innerHTML = lines.map(l => `<div class="quote-line">${l}</div>`).join('');
+  }
+}
+
+function copyQuote() {
+  const quoteEl = document.getElementById('quote-content');
+  if (!quoteEl) return;
+  const text = quoteEl.innerText;
+  const btn  = document.querySelector('.quote-copy-btn');
+
+  const confirm = () => {
+    const orig = btn.textContent;
+    btn.textContent = 'Copied!';
+    setTimeout(() => { btn.textContent = orig; }, 1500);
+  };
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(confirm).catch(() => fallbackCopy(text, confirm));
+  } else {
+    fallbackCopy(text, confirm);
+  }
+}
+
+function fallbackCopy(text, callback) {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.cssText = 'position:fixed;top:-9999px;left:-9999px';
+  document.body.appendChild(ta);
+  ta.select();
+  document.execCommand('copy');
+  document.body.removeChild(ta);
+  if (callback) callback();
 }
 
 // ─── Navigation ───────────────────────────────────────────────────────────────

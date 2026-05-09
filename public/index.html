@@ -356,6 +356,10 @@
             <span class="calc-row-label">Printing Cost</span>
             <span class="calc-row-value" id="printing-cost-output">—</span>
           </div>
+          <div class="calc-row">
+            <span class="calc-row-label">Lamination Cost</span>
+            <span class="calc-row-value" id="lam-cost-output">—</span>
+          </div>
         </div>
         <div class="price-display">
           <div class="price-label">Estimated Price</div>
@@ -769,10 +773,11 @@ function calculatePrice() {
   const sheetsEl       = document.getElementById('sheets-output');
   const paperCostEl    = document.getElementById('paper-cost-output');
   const printCostEl    = document.getElementById('printing-cost-output');
+  const lamCostEl      = document.getElementById('lam-cost-output');
   if (!upsEl) return;
 
   const reset = () => {
-    upsEl.textContent = sheetsEl.textContent = paperCostEl.textContent = printCostEl.textContent = '—';
+    upsEl.textContent = sheetsEl.textContent = paperCostEl.textContent = printCostEl.textContent = lamCostEl.textContent = '—';
   };
 
   const paperId = document.getElementById('paper')?.value;
@@ -814,8 +819,19 @@ function calculatePrice() {
     } else {
       printCostEl.textContent = '—';
     }
+
+    const lamination = document.getElementById('lamination')?.value;
+    const lamRate    = lamination === 'Normal 1 side' ? 0.05
+                     : lamination === 'Normal 2 side' ? 0.10
+                     : null;
+
+    if (lamRate !== null) {
+      lamCostEl.textContent = (sheets * lamRate).toFixed(2);
+    } else {
+      lamCostEl.textContent = '—';
+    }
   } else {
-    sheetsEl.textContent = paperCostEl.textContent = printCostEl.textContent = '—';
+    sheetsEl.textContent = paperCostEl.textContent = printCostEl.textContent = lamCostEl.textContent = '—';
   }
 }
 

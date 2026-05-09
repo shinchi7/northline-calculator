@@ -839,12 +839,8 @@ function calculatePrice() {
     const foldingVal = document.getElementById('folding')?.value;
     const numFolds   = foldingVal && foldingVal !== 'None' ? parseInt(foldingVal) : 0;
 
-    if (numFolds > 0) {
-      const foldCost = numFolds * 25 * Math.ceil(qty / 1000);
-      foldCostEl.textContent = foldCost.toFixed(2);
-    } else {
-      foldCostEl.textContent = '—';
-    }
+    const foldCost = numFolds > 0 ? numFolds * 25 * Math.ceil(qty / 1000) : 0;
+    foldCostEl.textContent = foldCost.toFixed(2);
   } else {
     sheetsEl.textContent = paperCostEl.textContent = printCostEl.textContent = lamCostEl.textContent = foldCostEl.textContent = '—';
   }

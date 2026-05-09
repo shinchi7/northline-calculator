@@ -237,6 +237,41 @@
 
     .delete-confirm { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; color: #cc3333; }
 
+    .calc-section-label {
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      color: #bbb;
+      border-top: 1px solid #efefef;
+      padding-top: 22px;
+      margin-top: 8px;
+      margin-bottom: 18px;
+    }
+
+    .calc-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid #f5f5f5;
+      font-size: 0.875rem;
+    }
+
+    .calc-row:last-child { border-bottom: none; }
+
+    .calc-row-label { color: #888; }
+
+    .calc-row-value { font-weight: 600; font-size: 1rem; color: #1a1a1a; }
+
+    .input-with-unit { position: relative; }
+    .input-with-unit input { padding-right: 40px; }
+    .input-unit {
+      position: absolute; right: 12px; top: 50%;
+      transform: translateY(-50%);
+      color: #bbb; font-size: 0.82rem; pointer-events: none;
+    }
+
     .edit-badge {
       display: inline-block;
       font-size: 0.65rem;
@@ -481,11 +516,13 @@ const PRODUCTS = {
           { id: 'qty',         label: 'Quantity',          type: 'number', placeholder: 'e.g. 500' },
           { id: 'paper',       label: 'Paper Type',        type: 'paper-select' },
           { id: 'open_size',   label: 'Open Size',         type: 'size',   ids: ['open_w',   'open_h']   },
+          { id: 'bleed',       label: 'Bleed on All Sides', type: 'bleed-input' },
           { id: 'closed_size', label: 'Closed Size',       type: 'size',   ids: ['closed_w', 'closed_h'] },
           { id: 'colours',     label: 'Number of Colours', type: 'radio',  options: ['1', '4'] },
           { id: 'sides',       label: 'Printing Sides',    type: 'radio',  options: ['0', '1', '2'] },
           { id: 'lamination',  label: 'Lamination',        type: 'select', options: ['None', 'Normal 1 side', 'Normal 2 side'] },
           { id: 'folding',     label: 'Folding',           type: 'select', options: ['None', '1 fold', '2 fold'] },
+          { id: 'calc_display', type: 'calc-display' },
         ]
       }
     ]
@@ -609,6 +646,24 @@ function renderField(f) {
           </div>
         </div>`;
 
+    case 'bleed-input':
+      return `
+        <div class="form-group">
+          <label class="field-label" for="bleed">${f.label}</label>
+          <div class="input-with-unit">
+            <input type="number" id="bleed" placeholder="e.g. 2" min="0" step="0.5" oninput="calculatePrice()" />
+            <span class="input-unit">mm</span>
+          </div>
+        </div>`;
+
+    case 'calc-display':
+      return `
+        <div class="calc-section-label">Calculation</div>
+        <div class="calc-row">
+          <span class="calc-row-label">Number of Ups</span>
+          <span class="calc-row-value" id="ups-output">—</span>
+        </div>`;
+
     default: return '';
   }
 }
@@ -649,7 +704,35 @@ document.getElementById('product-select').addEventListener('change', function ()
   renderCalculatorForm(this.value);
 });
 
-function calculatePrice() {}
+function calculatePrice() {
+  const product = document.getElementById('product-select').value;
+  if (product !== 'brochure') return;
+
+  const upsEl = document.getElementById('ups-output');
+  if (!upsEl) return;
+
+  const paperId = document.getElementById('paper')?.value;
+  const openW   = parseFloat(document.getElementById('open_w')?.value)  || 0;
+  const openH   = parseFloat(document.getElementById('open_h')?.value)  || 0;
+  const bleed   = parseFloat(document.getElementById('bleed')?.value)   || 0;
+
+  if (!paperId || !openW || !openH) { upsEl.textContent = '—'; return; }
+
+  const paper = papers.find(p => p.id === paperId);
+  if (!paper) { upsEl.textContent = '—'; return; }
+
+  const pieceW = openW + bleed * 2;
+  const pieceH = openH + bleed * 2;
+  const pw = paper.width;
+  const ph = paper.height;
+
+  // Try piece in normal and rotated orientation, take the best fit
+  const opt1 = Math.floor(pw / pieceW) * Math.floor(ph / pieceH);
+  const opt2 = Math.floor(pw / pieceH) * Math.floor(ph / pieceW);
+  const ups = Math.max(opt1, opt2);
+
+  upsEl.textContent = ups > 0 ? ups : '—';
+}
 
 // ─── Navigation ───────────────────────────────────────────────────────────────
 function showPage(name) {

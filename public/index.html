@@ -352,6 +352,10 @@
             <span class="calc-row-label">Total Paper Cost</span>
             <span class="calc-row-value" id="paper-cost-output">—</span>
           </div>
+          <div class="calc-row">
+            <span class="calc-row-label">Printing Cost</span>
+            <span class="calc-row-value" id="printing-cost-output">—</span>
+          </div>
         </div>
         <div class="price-display">
           <div class="price-label">Estimated Price</div>
@@ -761,13 +765,14 @@ function calculatePrice() {
   const product = document.getElementById('product-select').value;
   if (product !== 'brochure') return;
 
-  const upsEl       = document.getElementById('ups-output');
-  const sheetsEl    = document.getElementById('sheets-output');
-  const paperCostEl = document.getElementById('paper-cost-output');
+  const upsEl          = document.getElementById('ups-output');
+  const sheetsEl       = document.getElementById('sheets-output');
+  const paperCostEl    = document.getElementById('paper-cost-output');
+  const printCostEl    = document.getElementById('printing-cost-output');
   if (!upsEl) return;
 
   const reset = () => {
-    upsEl.textContent = sheetsEl.textContent = paperCostEl.textContent = '—';
+    upsEl.textContent = sheetsEl.textContent = paperCostEl.textContent = printCostEl.textContent = '—';
   };
 
   const paperId = document.getElementById('paper')?.value;
@@ -794,12 +799,23 @@ function calculatePrice() {
   upsEl.textContent = ups > 0 ? ups : '—';
 
   if (ups > 0 && qty > 0) {
-    const sheets = Math.ceil(qty / ups);
+    const sheets    = Math.ceil(qty / ups);
     const paperCost = sheets * paper.price;
     sheetsEl.textContent    = sheets;
     paperCostEl.textContent = paperCost.toFixed(2);
+
+    const colours     = parseInt(document.querySelector('input[name="colours"]:checked')?.value) || 0;
+    const sides       = parseInt(document.querySelector('input[name="sides"]:checked')?.value)   || 0;
+    const colourRate  = colours === 1 ? 0.012 : colours === 4 ? 0.075 : null;
+
+    if (colourRate !== null && sides > 0) {
+      const printCost = sheets * sides * colourRate;
+      printCostEl.textContent = printCost.toFixed(2);
+    } else {
+      printCostEl.textContent = '—';
+    }
   } else {
-    sheetsEl.textContent = paperCostEl.textContent = '—';
+    sheetsEl.textContent = paperCostEl.textContent = printCostEl.textContent = '—';
   }
 }
 

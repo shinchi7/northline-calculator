@@ -1,0 +1,7 @@
+CREATE TABLE IF NOT EXISTS papers (
+  id      VARCHAR(20)    NOT NULL PRIMARY KEY,
+  name    VARCHAR(255)   NOT NULL,
+  width   DECIMAL(10,2)  NOT NULL,
+  height  DECIMAL(10,2)  NOT NULL,
+  price   DECIMAL(10,2)  NOT NULL
+);

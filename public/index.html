@@ -855,7 +855,7 @@ function calculatePrice() {
     totalCostEl.textContent = totalCost.toFixed(2);
 
     // Suggested selling price
-    const suggestedPrice = paperCost * 1.5 + printCost * 2 + foldCost + 10;
+    const suggestedPrice = paperCost * 2 + printCost * 2 + foldCost + 10;
     priceOutEl.textContent = suggestedPrice.toFixed(2);
   } else {
     [sheetsEl, paperCostEl, printCostEl, lamCostEl, foldCostEl, totalCostEl, priceOutEl]

@@ -54,6 +54,27 @@
       align-items: center;
     }
 
+    .calc-layout {
+      display: flex;
+      gap: 24px;
+      width: 100%;
+      max-width: 1060px;
+      align-items: flex-start;
+    }
+
+    .calc-left {
+      flex: 1;
+      min-width: 0;
+      max-width: 600px;
+    }
+
+    .calc-right {
+      width: 300px;
+      flex-shrink: 0;
+      position: sticky;
+      top: 74px;
+    }
+
     .card {
       background: #fff;
       border-radius: 14px;
@@ -299,16 +320,47 @@
 
 <!-- CALCULATOR -->
 <div id="page-calculator" class="page active">
-  <div class="card">
-    <div class="form-group">
-      <label class="field-label" for="product-select">Product</label>
-      <select id="product-select">
-        <option value="">— Select a product —</option>
-        <option value="brochure">Brochure</option>
-        <option value="booklet">Booklet</option>
-      </select>
+  <div class="calc-layout">
+
+    <div class="calc-left">
+      <div class="card">
+        <div class="form-group">
+          <label class="field-label" for="product-select">Product</label>
+          <select id="product-select">
+            <option value="">— Select a product —</option>
+            <option value="brochure">Brochure</option>
+            <option value="booklet">Booklet</option>
+          </select>
+        </div>
+        <div id="product-form"></div>
+      </div>
     </div>
-    <div id="product-form"></div>
+
+    <div class="calc-right">
+      <div class="card">
+        <div id="calc-rows" style="display:none">
+          <div class="calc-section-label">Calculation</div>
+          <div class="calc-row">
+            <span class="calc-row-label">Number of Ups</span>
+            <span class="calc-row-value" id="ups-output">—</span>
+          </div>
+          <div class="calc-row">
+            <span class="calc-row-label">Number of Sheets Total</span>
+            <span class="calc-row-value" id="sheets-output">—</span>
+          </div>
+          <div class="calc-row">
+            <span class="calc-row-label">Total Paper Cost</span>
+            <span class="calc-row-value" id="paper-cost-output">—</span>
+          </div>
+        </div>
+        <div class="price-display">
+          <div class="price-label">Estimated Price</div>
+          <div class="price-value" id="price-output">—</div>
+          <div class="price-note"  id="price-note">Pricing formulas not yet configured</div>
+        </div>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -522,7 +574,6 @@ const PRODUCTS = {
           { id: 'sides',       label: 'Printing Sides',    type: 'radio',  options: ['0', '1', '2'] },
           { id: 'lamination',  label: 'Lamination',        type: 'select', options: ['None', 'Normal 1 side', 'Normal 2 side'] },
           { id: 'folding',     label: 'Folding',           type: 'select', options: ['None', '1 fold', '2 fold'] },
-          { id: 'calc_display', type: 'calc-display' },
         ]
       }
     ]
@@ -690,14 +741,8 @@ function renderCalculatorForm(key) {
     section.fields.forEach(f => { html += renderField(f); });
   });
 
-  html += `
-    <div class="price-display">
-      <div class="price-label">Estimated Price</div>
-      <div class="price-value" id="price-output">—</div>
-      <div class="price-note"  id="price-note">Pricing formulas not yet configured</div>
-    </div>`;
-
   document.getElementById('product-form').innerHTML = html;
+  document.getElementById('calc-rows').style.display = key === 'brochure' ? '' : 'none';
 }
 
 function refreshCalculatorPaperDropdowns() {

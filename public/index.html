@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Print Pricing Calculator</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f2f2f2;
+      color: #1a1a1a;
+      min-height: 100vh;
+    }
+
+    .top-bar {
+      background: #fff;
+      border-bottom: 1px solid #ebebeb;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 28px;
+      height: 54px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .top-bar h1 { font-size: 0.95rem; font-weight: 600; letter-spacing: -0.2px; }
+
+    .nav-tabs { display: flex; gap: 4px; }
+
+    .nav-tab {
+      padding: 6px 16px;
+      border: none;
+      background: none;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: #999;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .nav-tab:hover  { background: #f4f4f4; color: #1a1a1a; }
+    .nav-tab.active { background: #1a1a1a; color: #fff; }
+
+    .page { display: none; padding: 40px 20px 80px; }
+
+    .page.active {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 14px;
+      padding: 28px 32px;
+      width: 100%;
+      max-width: 600px;
+      box-shadow: 0 2px 16px rgba(0,0,0,0.07);
+    }
+
+    .card + .card { margin-top: 16px; }
+
+    .card-title { font-size: 0.875rem; font-weight: 600; margin-bottom: 20px; }
+
+    .card.editing { border: 1.5px solid #1a1a1a; }
+
+    .field-label {
+      display: block;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.7px;
+      color: #999;
+      margin-bottom: 7px;
+    }
+
+    .sub-label { font-size: 0.72rem; color: #bbb; margin-bottom: 5px; }
+
+    input[type="text"],
+    input[type="number"],
+    select {
+      width: 100%;
+      padding: 10px 13px;
+      border: 1.5px solid #e4e4e4;
+      border-radius: 8px;
+      font-size: 0.92rem;
+      color: #1a1a1a;
+      background: #fff;
+      -webkit-appearance: none;
+      appearance: none;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    input:focus, select:focus { border-color: #1a1a1a; }
+
+    .form-group { margin-bottom: 16px; }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: opacity 0.15s;
+    }
+
+    .btn:hover { opacity: 0.75; }
+
+    .btn-primary { background: #1a1a1a; color: #fff; }
+    .btn-outline { background: #fff; color: #1a1a1a; border: 1.5px solid #e4e4e4; }
+    .btn-danger  { background: #fff; color: #cc3333; border: 1.5px solid #f5c0c0; }
+    .btn-sm      { padding: 6px 12px; font-size: 0.78rem; }
+
+    .btn-row {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+      margin-top: 8px;
+    }
+
+    .section-divider {
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      color: #bbb;
+      border-top: 1px solid #efefef;
+      padding-top: 22px;
+      margin-top: 8px;
+      margin-bottom: 18px;
+    }
+
+    .radio-group { display: flex; gap: 8px; }
+    .radio-option { flex: 1; }
+
+    .radio-option input[type="radio"] {
+      position: absolute; opacity: 0; pointer-events: none; width: 0; height: 0;
+    }
+
+    .radio-option label {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 9px 6px;
+      border: 1.5px solid #e4e4e4;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: #666;
+      white-space: nowrap;
+      transition: border-color 0.15s, background 0.15s, color 0.15s;
+    }
+
+    .radio-option input[type="radio"]:checked + label {
+      border-color: #1a1a1a;
+      background: #1a1a1a;
+      color: #fff;
+    }
+
+    .price-display {
+      margin-top: 28px;
+      padding: 22px 20px;
+      background: #f7f7f7;
+      border-radius: 10px;
+      text-align: center;
+    }
+
+    .price-label {
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #bbb;
+      margin-bottom: 8px;
+    }
+
+    .price-value { font-size: 2.2rem; font-weight: 700; color: #1a1a1a; letter-spacing: -1px; }
+
+    .price-note { font-size: 0.78rem; color: #bbb; margin-top: 6px; }
+
+    .paper-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+
+    .paper-table th {
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.7px;
+      color: #bbb;
+      text-align: left;
+      padding: 0 12px 12px 0;
+      border-bottom: 1px solid #efefef;
+    }
+
+    .paper-table th:last-child { padding-right: 0; }
+
+    .paper-table td {
+      padding: 12px 12px 12px 0;
+      border-bottom: 1px solid #f5f5f5;
+      vertical-align: middle;
+    }
+
+    .paper-table td:last-child { padding-right: 0; }
+    .paper-table tr:last-child td { border-bottom: none; }
+
+    .paper-actions { display: flex; gap: 6px; justify-content: flex-end; }
+
+    .empty-state { text-align: center; padding: 32px 0; color: #ccc; font-size: 0.875rem; }
+
+    .paper-notice {
+      font-size: 0.83rem;
+      color: #aaa;
+      padding: 10px 13px;
+      border: 1.5px dashed #e4e4e4;
+      border-radius: 8px;
+    }
+
+    .paper-notice a { color: #1a1a1a; cursor: pointer; text-decoration: underline; font-weight: 500; }
+
+    .form-error { font-size: 0.8rem; color: #cc3333; margin-top: 10px; min-height: 1.2em; }
+
+    .delete-confirm { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; color: #cc3333; }
+
+    .edit-badge {
+      display: inline-block;
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      background: #1a1a1a;
+      color: #fff;
+      padding: 2px 7px;
+      border-radius: 4px;
+      margin-left: 8px;
+      vertical-align: middle;
+    }
+  </style>
+</head>
+<body>
+
+<div class="top-bar">
+  <h1>Print Pricing</h1>
+  <nav class="nav-tabs">
+    <button class="nav-tab active" onclick="showPage('calculator')">Calculator</button>
+    <button class="nav-tab"        onclick="showPage('papers')">Paper Database</button>
+  </nav>
+</div>
+
+<!-- CALCULATOR -->
+<div id="page-calculator" class="page active">
+  <div class="card">
+    <div class="form-group">
+      <label class="field-label" for="product-select">Product</label>
+      <select id="product-select">
+        <option value="">— Select a product —</option>
+        <option value="brochure">Brochure</option>
+        <option value="booklet">Booklet</option>
+      </select>
+    </div>
+    <div id="product-form"></div>
+  </div>
+</div>
+
+<!-- PAPER DATABASE -->
+<div id="page-papers" class="page">
+
+  <div class="card" id="paper-form-card">
+    <div class="card-title" id="paper-form-title">Add Paper</div>
+
+    <div class="form-group">
+      <label class="field-label" for="p-name">Paper Name / Type</label>
+      <input type="text" id="p-name" placeholder="e.g. 150gsm Gloss Art" />
+    </div>
+
+    <div class="form-group">
+      <label class="field-label">Paper Size</label>
+      <div class="form-row">
+        <div>
+          <div class="sub-label">Width (mm)</div>
+          <input type="number" id="p-width" placeholder="Width" min="1" />
+        </div>
+        <div>
+          <div class="sub-label">Height (mm)</div>
+          <input type="number" id="p-height" placeholder="Height" min="1" />
+        </div>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="field-label" for="p-price">Price per Piece</label>
+      <input type="number" id="p-price" placeholder="0.000" min="0" step="0.001" />
+    </div>
+
+    <input type="hidden" id="p-edit-id" value="" />
+
+    <div class="btn-row">
+      <button class="btn btn-outline" id="paper-cancel-btn"
+              onclick="cancelEdit()" style="display:none">Cancel</button>
+      <button class="btn btn-primary" id="paper-save-btn"
+              onclick="savePaper()">Add Paper</button>
+    </div>
+    <div class="form-error" id="paper-form-error"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">All Papers</div>
+    <div id="paper-table-container">
+      <div class="empty-state">No papers added yet.</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ─── State ────────────────────────────────────────────────────────────────────
+let papers = [];
+
+// ─── API helpers ──────────────────────────────────────────────────────────────
+async function apiFetch(method, url, body) {
+  const opts = { method, headers: {} };
+  if (body) {
+    opts.headers['Content-Type'] = 'application/json';
+    opts.body = JSON.stringify(body);
+  }
+  const res = await fetch(url, opts);
+  if (res.status === 204) return null;
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+async function refreshPapers() {
+  papers = await apiFetch('GET', '/api/papers');
+}
+
+function showFormError(msg) { document.getElementById('paper-form-error').textContent = msg; }
+function clearFormError()   { document.getElementById('paper-form-error').textContent = ''; }
+
+// ─── Paper CRUD ───────────────────────────────────────────────────────────────
+async function savePaper() {
+  clearFormError();
+  const name   = document.getElementById('p-name').value.trim();
+  const width  = parseFloat(document.getElementById('p-width').value);
+  const height = parseFloat(document.getElementById('p-height').value);
+  const price  = parseFloat(document.getElementById('p-price').value);
+  const editId = document.getElementById('p-edit-id').value;
+
+  if (!name)             { showFormError('Please enter a paper name.');      return; }
+  if (!width || !height) { showFormError('Please enter the paper size.');    return; }
+  if (isNaN(price))      { showFormError('Please enter a price per piece.'); return; }
+
+  try {
+    if (editId) {
+      await apiFetch('PUT', `/api/papers/${editId}`, { name, width, height, price });
+    } else {
+      await apiFetch('POST', '/api/papers', { name, width, height, price });
+    }
+    await refreshPapers();
+    resetPaperForm();
+    renderPaperTable();
+    refreshCalculatorPaperDropdowns();
+  } catch {
+    showFormError('Failed to save. Please try again.');
+  }
+}
+
+function deletePaper(id) {
+  const btn = document.querySelector(`[data-delete-id="${id}"]`);
+  if (!btn) return;
+  btn.outerHTML = `
+    <span class="delete-confirm">
+      Sure?
+      <button class="btn btn-danger btn-sm" onclick="confirmDelete('${id}')">Yes</button>
+      <button class="btn btn-outline btn-sm" onclick="renderPaperTable()">No</button>
+    </span>`;
+}
+
+async function confirmDelete(id) {
+  try {
+    await apiFetch('DELETE', `/api/papers/${id}`);
+    await refreshPapers();
+  } finally {
+    renderPaperTable();
+    refreshCalculatorPaperDropdowns();
+  }
+}
+
+function editPaper(id) {
+  const paper = papers.find(p => p.id === id);
+  if (!paper) return;
+
+  document.getElementById('p-name').value    = paper.name;
+  document.getElementById('p-width').value   = paper.width;
+  document.getElementById('p-height').value  = paper.height;
+  document.getElementById('p-price').value   = paper.price;
+  document.getElementById('p-edit-id').value = paper.id;
+
+  document.getElementById('paper-form-title').innerHTML =
+    'Edit Paper <span class="edit-badge">Editing</span>';
+  document.getElementById('paper-save-btn').textContent     = 'Update Paper';
+  document.getElementById('paper-cancel-btn').style.display = '';
+  document.getElementById('paper-form-card').classList.add('editing');
+
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function cancelEdit() { resetPaperForm(); }
+
+function resetPaperForm() {
+  ['p-name', 'p-width', 'p-height', 'p-price', 'p-edit-id']
+    .forEach(id => { document.getElementById(id).value = ''; });
+
+  document.getElementById('paper-form-title').textContent     = 'Add Paper';
+  document.getElementById('paper-save-btn').textContent       = 'Add Paper';
+  document.getElementById('paper-cancel-btn').style.display   = 'none';
+  document.getElementById('paper-form-card').classList.remove('editing');
+  clearFormError();
+}
+
+// ─── Paper table render ───────────────────────────────────────────────────────
+function renderPaperTable() {
+  const container = document.getElementById('paper-table-container');
+
+  if (!papers.length) {
+    container.innerHTML = '<div class="empty-state">No papers added yet.</div>';
+    return;
+  }
+
+  const rows = papers.map(p => `
+    <tr>
+      <td>${escHtml(p.name)}</td>
+      <td style="color:#888">${p.width} × ${p.height} mm</td>
+      <td style="font-variant-numeric:tabular-nums">${parseFloat(p.price).toFixed(3)}</td>
+      <td>
+        <div class="paper-actions">
+          <button class="btn btn-outline btn-sm" onclick="editPaper('${p.id}')">Edit</button>
+          <button class="btn btn-danger  btn-sm" data-delete-id="${p.id}" onclick="deletePaper('${p.id}')">Delete</button>
+        </div>
+      </td>
+    </tr>`).join('');
+
+  container.innerHTML = `
+    <table class="paper-table">
+      <thead>
+        <tr>
+          <th>Name / Type</th>
+          <th>Size</th>
+          <th>Price / pc</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
+function escHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ─── Calculator ───────────────────────────────────────────────────────────────
+const PRODUCTS = {
+  brochure: {
+    sections: [
+      {
+        fields: [
+          { id: 'qty',         label: 'Quantity',          type: 'number', placeholder: 'e.g. 500' },
+          { id: 'paper',       label: 'Paper Type',        type: 'paper-select' },
+          { id: 'open_size',   label: 'Open Size',         type: 'size',   ids: ['open_w',   'open_h']   },
+          { id: 'closed_size', label: 'Closed Size',       type: 'size',   ids: ['closed_w', 'closed_h'] },
+          { id: 'colours',     label: 'Number of Colours', type: 'radio',  options: ['1', '4'] },
+          { id: 'sides',       label: 'Printing Sides',    type: 'radio',  options: ['0', '1', '2'] },
+          { id: 'lamination',  label: 'Lamination',        type: 'select', options: ['None', 'Normal 1 side', 'Normal 2 side'] },
+          { id: 'folding',     label: 'Folding',           type: 'select', options: ['None', '1 fold', '2 fold'] },
+        ]
+      }
+    ]
+  },
+
+  booklet: {
+    sections: [
+      {
+        fields: [
+          { id: 'qty',         label: 'Quantity',    type: 'number', placeholder: 'e.g. 500' },
+          { id: 'open_size',   label: 'Open Size',   type: 'size',   ids: ['open_w',   'open_h']   },
+          { id: 'closed_size', label: 'Closed Size', type: 'size',   ids: ['closed_w', 'closed_h'] },
+        ]
+      },
+      {
+        label: 'Cover',
+        fields: [
+          { id: 'cover_paper',   label: 'Paper Type',        type: 'paper-select' },
+          { id: 'cover_colours', label: 'Number of Colours', type: 'radio',  options: ['1', '4'] },
+          { id: 'cover_sides',   label: 'Printing Sides',    type: 'radio',  options: ['0', '1', '2'] },
+          { id: 'cover_lam',     label: 'Lamination',        type: 'select', options: ['None', 'Normal 1 side', 'Normal 2 side'] },
+        ]
+      },
+      {
+        label: 'Content',
+        fields: [
+          { id: 'content_paper',   label: 'Paper Type',        type: 'paper-select' },
+          { id: 'content_colours', label: 'Number of Colours', type: 'radio',  options: ['1', '4'] },
+          { id: 'content_sides',   label: 'Printing Sides',    type: 'radio',  options: ['0', '1', '2'] },
+          { id: 'content_lam',     label: 'Lamination',        type: 'select', options: ['None', 'Normal 1 side', 'Normal 2 side'] },
+        ]
+      },
+      {
+        label: 'Binding',
+        fields: [
+          { id: 'binding', label: 'Binding Type', type: 'radio', options: ['Saddle-stitch', 'Perfect Bind', 'Wire-O'] },
+        ]
+      }
+    ]
+  }
+};
+
+function paperSelectHtml(id) {
+  if (!papers.length) {
+    return `
+      <div class="form-group">
+        <label class="field-label">Paper Type</label>
+        <div class="paper-notice">
+          No papers in database —
+          <a onclick="showPage('papers')">add papers first →</a>
+        </div>
+      </div>`;
+  }
+
+  const opts = papers.map(p =>
+    `<option value="${p.id}">${escHtml(p.name)} (${p.width}×${p.height} mm)</option>`
+  ).join('');
+
+  return `
+    <div class="form-group">
+      <label class="field-label" for="${id}">Paper Type</label>
+      <select id="${id}" onchange="calculatePrice()">
+        <option value="">— Select —</option>
+        ${opts}
+      </select>
+    </div>`;
+}
+
+function renderField(f) {
+  switch (f.type) {
+    case 'paper-select':
+      return paperSelectHtml(f.id);
+
+    case 'number':
+      return `
+        <div class="form-group">
+          <label class="field-label" for="${f.id}">${f.label}</label>
+          <input type="number" id="${f.id}" placeholder="${f.placeholder || ''}"
+                 min="1" oninput="calculatePrice()" />
+        </div>`;
+
+    case 'select':
+      return `
+        <div class="form-group">
+          <label class="field-label" for="${f.id}">${f.label}</label>
+          <select id="${f.id}" onchange="calculatePrice()">
+            <option value="">— Select —</option>
+            ${f.options.map(o => `<option value="${o}">${o}</option>`).join('')}
+          </select>
+        </div>`;
+
+    case 'radio':
+      return `
+        <div class="form-group">
+          <label class="field-label">${f.label}</label>
+          <div class="radio-group">
+            ${f.options.map(o => `
+              <div class="radio-option">
+                <input type="radio" name="${f.id}" id="${f.id}_${o}"
+                       value="${o}" onchange="calculatePrice()" />
+                <label for="${f.id}_${o}">${o}</label>
+              </div>`).join('')}
+          </div>
+        </div>`;
+
+    case 'size':
+      return `
+        <div class="form-group">
+          <label class="field-label">${f.label}</label>
+          <div class="form-row">
+            <div>
+              <div class="sub-label">Width (mm)</div>
+              <input type="number" id="${f.ids[0]}" placeholder="Width"
+                     min="1" oninput="calculatePrice()" />
+            </div>
+            <div>
+              <div class="sub-label">Height (mm)</div>
+              <input type="number" id="${f.ids[1]}" placeholder="Height"
+                     min="1" oninput="calculatePrice()" />
+            </div>
+          </div>
+        </div>`;
+
+    default: return '';
+  }
+}
+
+function renderCalculatorForm(key) {
+  const product = PRODUCTS[key];
+  if (!product) return;
+
+  let html = '';
+  product.sections.forEach((section, idx) => {
+    if (section.label) {
+      html += `<div class="section-divider">${section.label}</div>`;
+    } else if (idx > 0) {
+      html += `<div class="section-divider"></div>`;
+    }
+    section.fields.forEach(f => { html += renderField(f); });
+  });
+
+  html += `
+    <div class="price-display">
+      <div class="price-label">Estimated Price</div>
+      <div class="price-value" id="price-output">—</div>
+      <div class="price-note"  id="price-note">Pricing formulas not yet configured</div>
+    </div>`;
+
+  document.getElementById('product-form').innerHTML = html;
+}
+
+function refreshCalculatorPaperDropdowns() {
+  const key = document.getElementById('product-select').value;
+  if (!key) return;
+  renderCalculatorForm(key);
+}
+
+document.getElementById('product-select').addEventListener('change', function () {
+  const formEl = document.getElementById('product-form');
+  if (!this.value) { formEl.innerHTML = ''; return; }
+  renderCalculatorForm(this.value);
+});
+
+function calculatePrice() {}
+
+// ─── Navigation ───────────────────────────────────────────────────────────────
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(el => el.classList.remove('active'));
+  document.getElementById(`page-${name}`).classList.add('active');
+  document.querySelector(`.nav-tab[onclick="showPage('${name}')"]`).classList.add('active');
+}
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+(async () => {
+  await refreshPapers();
+  renderPaperTable();
+})();
+</script>
+
+</body>
+</html>

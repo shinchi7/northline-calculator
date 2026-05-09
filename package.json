@@ -1,0 +1,12 @@
+{
+  "name": "northline-calculator",
+  "version": "1.0.0",
+  "description": "Print pricing calculator",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}

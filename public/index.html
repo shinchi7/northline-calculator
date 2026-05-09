@@ -662,6 +662,14 @@ function renderField(f) {
         <div class="calc-row">
           <span class="calc-row-label">Number of Ups</span>
           <span class="calc-row-value" id="ups-output">—</span>
+        </div>
+        <div class="calc-row">
+          <span class="calc-row-label">Number of Sheets Total</span>
+          <span class="calc-row-value" id="sheets-output">—</span>
+        </div>
+        <div class="calc-row">
+          <span class="calc-row-label">Total Paper Cost</span>
+          <span class="calc-row-value" id="paper-cost-output">—</span>
         </div>`;
 
     default: return '';
@@ -708,18 +716,25 @@ function calculatePrice() {
   const product = document.getElementById('product-select').value;
   if (product !== 'brochure') return;
 
-  const upsEl = document.getElementById('ups-output');
+  const upsEl       = document.getElementById('ups-output');
+  const sheetsEl    = document.getElementById('sheets-output');
+  const paperCostEl = document.getElementById('paper-cost-output');
   if (!upsEl) return;
 
+  const reset = () => {
+    upsEl.textContent = sheetsEl.textContent = paperCostEl.textContent = '—';
+  };
+
   const paperId = document.getElementById('paper')?.value;
+  const qty     = parseFloat(document.getElementById('qty')?.value)     || 0;
   const openW   = parseFloat(document.getElementById('open_w')?.value)  || 0;
   const openH   = parseFloat(document.getElementById('open_h')?.value)  || 0;
   const bleed   = parseFloat(document.getElementById('bleed')?.value)   || 0;
 
-  if (!paperId || !openW || !openH) { upsEl.textContent = '—'; return; }
+  if (!paperId || !openW || !openH) { reset(); return; }
 
   const paper = papers.find(p => p.id === paperId);
-  if (!paper) { upsEl.textContent = '—'; return; }
+  if (!paper) { reset(); return; }
 
   const pieceW = openW + bleed * 2;
   const pieceH = openH + bleed * 2;
@@ -732,6 +747,15 @@ function calculatePrice() {
   const ups = Math.max(opt1, opt2);
 
   upsEl.textContent = ups > 0 ? ups : '—';
+
+  if (ups > 0 && qty > 0) {
+    const sheets = Math.ceil(qty / ups);
+    const paperCost = sheets * paper.price;
+    sheetsEl.textContent    = sheets;
+    paperCostEl.textContent = paperCost.toFixed(2);
+  } else {
+    sheetsEl.textContent = paperCostEl.textContent = '—';
+  }
 }
 
 // ─── Navigation ───────────────────────────────────────────────────────────────

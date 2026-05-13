@@ -457,6 +457,28 @@
               <span class="calc-row-label">Total Lamination Cost</span>
               <span class="calc-row-value" id="cover-lam-cost-output">—</span>
             </div>
+
+            <div class="calc-section-label" style="font-size:0.75rem;font-weight:600;color:#666;margin-top:12px;">Content</div>
+            <div class="calc-row">
+              <span class="calc-row-label">Number of Ups</span>
+              <span class="calc-row-value" id="content-ups-output">—</span>
+            </div>
+            <div class="calc-row">
+              <span class="calc-row-label">Number of Sheets Total</span>
+              <span class="calc-row-value" id="content-sheets-output">—</span>
+            </div>
+            <div class="calc-row">
+              <span class="calc-row-label">Total Paper Cost</span>
+              <span class="calc-row-value" id="content-paper-cost-output">—</span>
+            </div>
+            <div class="calc-row">
+              <span class="calc-row-label">Total Print Cost</span>
+              <span class="calc-row-value" id="content-print-cost-output">—</span>
+            </div>
+            <div class="calc-row">
+              <span class="calc-row-label">Total Lamination Cost</span>
+              <span class="calc-row-value" id="content-lam-cost-output">—</span>
+            </div>
           </div>
 
         </div>
@@ -1032,6 +1054,51 @@ function calculateBooklet() {
   const coverLamRate = coverLam === '1 side' ? 0.05 : coverLam === '2 sides' ? 0.10 : null;
   const coverLamCost = coverLamRate !== null ? coverSheets * coverLamRate : null;
   document.getElementById('cover-lam-cost-output').textContent = coverLamCost !== null ? coverLamCost.toFixed(2) : '—';
+
+  // ── Content ──────────────────────────────────────────────────────────────
+  const contentOutputs = ['content-ups-output','content-sheets-output','content-paper-cost-output',
+                          'content-print-cost-output','content-lam-cost-output'];
+  const resetContent = () => contentOutputs.forEach(id => { document.getElementById(id).textContent = '—'; });
+
+  const printedPages   = parseFloat(document.getElementById('printed_pages')?.value) || 0;
+  const contentPaperId = document.getElementById('content_paper')?.value;
+
+  if (!printedPages || !contentPaperId) { resetContent(); updateQuote(); return; }
+
+  const contentPaper = papers.find(p => p.id === contentPaperId);
+  if (!contentPaper) { resetContent(); updateQuote(); return; }
+
+  // Number of Ups (same bleed, open size, content paper sheet dimensions)
+  const cpw = contentPaper.width;
+  const cph = contentPaper.height;
+  const cOpt1      = Math.floor(cpw / pieceW) * Math.floor(cph / pieceH);
+  const cOpt2      = Math.floor(cpw / pieceH) * Math.floor(cph / pieceW);
+  const contentUps = Math.max(cOpt1, cOpt2);
+
+  document.getElementById('content-ups-output').textContent = contentUps > 0 ? contentUps : '—';
+  if (!contentUps) { resetContent(); updateQuote(); return; }
+
+  // Each sheet = 4 printed pages → sheets needed per booklet = printedPages / 4
+  const sheetsPerBooklet  = printedPages / 4;
+  const contentSheets     = Math.ceil((qty * sheetsPerBooklet) / contentUps);
+  document.getElementById('content-sheets-output').textContent = contentSheets;
+
+  // Paper cost
+  const contentPaperCost = contentSheets * contentPaper.price;
+  document.getElementById('content-paper-cost-output').textContent = contentPaperCost.toFixed(2);
+
+  // Print cost
+  const contentColours    = parseInt(document.querySelector('input[name="content_colours"]:checked')?.value) || 0;
+  const contentSides      = parseInt(document.querySelector('input[name="content_sides"]:checked')?.value)   || 0;
+  const contentColourRate = contentColours === 1 ? 0.012 : contentColours === 4 ? 0.075 : null;
+  const contentPrintCost  = (contentColourRate !== null && contentSides > 0) ? contentSheets * contentSides * contentColourRate : null;
+  document.getElementById('content-print-cost-output').textContent = contentPrintCost !== null ? contentPrintCost.toFixed(2) : '—';
+
+  // Lamination cost
+  const contentLam     = document.getElementById('content_lam')?.value;
+  const contentLamRate = contentLam === '1 side' ? 0.05 : contentLam === '2 sides' ? 0.10 : null;
+  const contentLamCost = contentLamRate !== null ? contentSheets * contentLamRate : null;
+  document.getElementById('content-lam-cost-output').textContent = contentLamCost !== null ? contentLamCost.toFixed(2) : '—';
 
   updateQuote();
 }

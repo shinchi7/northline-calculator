@@ -701,7 +701,7 @@ const PRODUCTS = {
           { id: 'cover_paper',   label: 'Paper Type',        type: 'paper-select' },
           { id: 'cover_colours', label: 'Number of Colours', type: 'radio',  options: ['1', '4'] },
           { id: 'cover_sides',   label: 'Printing Sides',    type: 'radio',  options: ['0', '1', '2'] },
-          { id: 'cover_lam',     label: 'Lamination',        type: 'select', options: ['None', 'Normal 1 side', 'Normal 2 side'] },
+          { id: 'cover_lam_pair', type: 'lam-pair', typeId: 'cover_lam_type', sidesId: 'cover_lam' },
         ]
       },
       {
@@ -711,7 +711,7 @@ const PRODUCTS = {
           { id: 'printed_pages',   label: 'Printed Pages',     type: 'number', placeholder: 'e.g. 16' },
           { id: 'content_colours', label: 'Number of Colours', type: 'radio',  options: ['1', '4'] },
           { id: 'content_sides',   label: 'Printing Sides',    type: 'radio',  options: ['0', '1', '2'] },
-          { id: 'content_lam',     label: 'Lamination',        type: 'select', options: ['None', 'Normal 1 side', 'Normal 2 side'] },
+          { id: 'content_lam_pair', type: 'lam-pair', typeId: 'content_lam_type', sidesId: 'content_lam' },
         ]
       },
       {
@@ -805,14 +805,16 @@ function renderField(f) {
           </div>
         </div>`;
 
-    case 'lam-pair':
+    case 'lam-pair': {
+      const typeId  = f.typeId  || 'lam_type';
+      const sidesId = f.sidesId || 'lamination';
       return `
         <div class="form-group">
           <label class="field-label">Lamination</label>
           <div class="form-row">
             <div>
               <div class="sub-label">Type</div>
-              <select id="lam_type" onchange="calculatePrice()">
+              <select id="${typeId}" onchange="calculatePrice()">
                 <option value="">— Select —</option>
                 <option value="Gloss">Gloss</option>
                 <option value="Matt">Matt</option>
@@ -820,7 +822,7 @@ function renderField(f) {
             </div>
             <div>
               <div class="sub-label">Sides</div>
-              <select id="lamination" onchange="calculatePrice()">
+              <select id="${sidesId}" onchange="calculatePrice()">
                 <option value="">— Select —</option>
                 <option value="None">None</option>
                 <option value="1 side">1 side</option>
@@ -829,6 +831,7 @@ function renderField(f) {
             </div>
           </div>
         </div>`;
+    }
 
     case 'bleed-input':
       return `
@@ -1026,7 +1029,7 @@ function calculateBooklet() {
 
   // Lamination cost
   const coverLam     = document.getElementById('cover_lam')?.value;
-  const coverLamRate = coverLam === 'Normal 1 side' ? 0.05 : coverLam === 'Normal 2 side' ? 0.10 : null;
+  const coverLamRate = coverLam === '1 side' ? 0.05 : coverLam === '2 sides' ? 0.10 : null;
   const coverLamCost = coverLamRate !== null ? coverSheets * coverLamRate : null;
   document.getElementById('cover-lam-cost-output').textContent = coverLamCost !== null ? coverLamCost.toFixed(2) : '—';
 

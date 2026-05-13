@@ -142,6 +142,22 @@
       top: 74px;
     }
 
+    .qty-row { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; }
+    .qty-row input { flex: 1; margin-bottom: 0; }
+    .qty-remove { flex-shrink: 0; padding: 10px 12px; line-height: 1; }
+
+    .qty-price-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border-row);
+    }
+    .qty-price-row:last-child { border-bottom: none; }
+    .qty-price-label { color: var(--text-muted); font-size: 0.875rem; }
+    .qty-price-value { font-weight: 600; font-size: 1rem; color: var(--text); text-align: right; }
+    .qty-price-unit  { font-size: 0.75rem; color: var(--text-dim); font-weight: 400; }
+
     @media (max-width: 700px) {
       .calc-layout {
         flex-direction: column;
@@ -587,18 +603,14 @@
               <span class="calc-row-value" id="binding-total-output">—</span>
             </div>
 
-            <div class="calc-row total" style="margin-top:8px;">
-              <span class="calc-row-label">Total Cost for Job</span>
-              <span class="calc-row-value" id="booklet-total-cost-output">—</span>
-            </div>
+            <div id="qty-prices-output"></div>
           </div>
 
         </div>
-        <div class="price-display">
+        <div class="price-display" id="price-display">
           <div class="price-label">Suggested Selling Price</div>
           <div class="price-value" id="price-output">—</div>
           <div class="price-note"  id="price-note"></div>
-          <div class="price-note"  id="price-per-unit" style="margin-top:4px;font-size:0.8rem;color:#666;"></div>
         </div>
       </div>
     </div>
@@ -825,7 +837,7 @@ const PRODUCTS = {
     sections: [
       {
         fields: [
-          { id: 'qty',         label: 'Quantity',    type: 'number', placeholder: 'e.g. 500' },
+          { id: 'qty_list', type: 'qty-list' },
           { id: 'open_size',   label: 'Open Size',   type: 'size',   ids: ['open_w',   'open_h']   },
           { id: 'closed_size', label: 'Closed Size', type: 'size',   ids: ['closed_w', 'closed_h'] },
         ]
@@ -968,6 +980,18 @@ function renderField(f) {
         </div>`;
     }
 
+    case 'qty-list':
+      return `
+        <div class="form-group">
+          <label class="field-label">Quantity</label>
+          <div id="qty-list-container">
+            <div class="qty-row">
+              <input type="number" class="qty-input" placeholder="e.g. 500" min="1" oninput="calculatePrice()" />
+            </div>
+          </div>
+          <button type="button" class="btn btn-outline btn-sm" onclick="addQtyRow()" style="width:100%;margin-top:4px;">+ Add Quantity</button>
+        </div>`;
+
     case 'bleed-input':
       return `
         <div class="form-group">
@@ -1016,6 +1040,7 @@ function renderCalculatorForm(key) {
   document.getElementById('calc-rows').style.display      = (key === 'brochure' || key === 'booklet') ? '' : 'none';
   document.getElementById('brochure-rows').style.display  = key === 'brochure' ? '' : 'none';
   document.getElementById('booklet-rows').style.display   = key === 'booklet'  ? '' : 'none';
+  document.getElementById('price-display').style.display  = key === 'booklet'  ? 'none' : '';
   updateQuote();
 }
 
@@ -1114,137 +1139,167 @@ function calculatePrice() {
   updateQuote();
 }
 
+// ─── Booklet qty rows ─────────────────────────────────────────────────────────
+function addQtyRow() {
+  const container = document.getElementById('qty-list-container');
+  const div = document.createElement('div');
+  div.className = 'qty-row';
+  div.innerHTML = `
+    <input type="number" class="qty-input" placeholder="e.g. 1000" min="1" oninput="calculatePrice()" />
+    <button type="button" class="btn btn-outline btn-sm qty-remove" onclick="removeQtyRow(this)">✕</button>`;
+  container.appendChild(div);
+  calculatePrice();
+}
+
+function removeQtyRow(btn) {
+  btn.closest('.qty-row').remove();
+  calculatePrice();
+}
+
 // ─── Booklet calculator ───────────────────────────────────────────────────────
 function calculateBooklet() {
-  const coverOutputs = ['cover-ups-output','cover-sheets-output','cover-paper-cost-output',
-                        'cover-print-cost-output','cover-lam-cost-output'];
-  const reset = () => {
-    coverOutputs.forEach(id => { const el = document.getElementById(id); if (el) el.textContent = '—'; });
+  const allOutputIds = ['cover-ups-output','cover-sheets-output','cover-paper-cost-output',
+                        'cover-print-cost-output','cover-lam-cost-output',
+                        'content-ups-output','content-sheets-output','content-paper-cost-output',
+                        'content-print-cost-output','content-lam-cost-output',
+                        'binding-setup-output','binding-run-output','binding-total-output'];
+  const resetAll = () => {
+    allOutputIds.forEach(id => { const el = document.getElementById(id); if (el) el.textContent = '—'; });
+    document.getElementById('qty-prices-output').innerHTML = '';
     updateQuote();
   };
 
-  const qty          = parseFloat(document.getElementById('qty')?.value)        || 0;
-  const openW        = parseFloat(document.getElementById('open_w')?.value)     || 0;
-  const openH        = parseFloat(document.getElementById('open_h')?.value)     || 0;
+  // ── Read quantities ───────────────────────────────────────────────────────
+  const qtys = [...document.querySelectorAll('.qty-input')]
+    .map(el => parseFloat(el.value))
+    .filter(v => v > 0);
+
+  const openW        = parseFloat(document.getElementById('open_w')?.value)  || 0;
+  const openH        = parseFloat(document.getElementById('open_h')?.value)  || 0;
   const coverPaperId = document.getElementById('cover_paper')?.value;
 
-  if (!qty || !openW || !openH || !coverPaperId) return reset();
+  if (!qtys.length || !openW || !openH || !coverPaperId) return resetAll();
 
   const coverPaper = papers.find(p => p.id === coverPaperId);
-  if (!coverPaper) return reset();
+  if (!coverPaper) return resetAll();
 
-  // Number of Ups (bleed 3mm)
+  // ── Cover ups (shared across all quantities) ──────────────────────────────
   const bleed  = 3;
   const pieceW = openW + bleed * 2;
   const pieceH = openH + bleed * 2;
   const pw = coverPaper.width;
   const ph = coverPaper.height;
-  const opt1     = Math.floor(pw / pieceW) * Math.floor(ph / pieceH);
-  const opt2     = Math.floor(pw / pieceH) * Math.floor(ph / pieceW);
-  const coverUps = Math.max(opt1, opt2);
-
+  const coverUps = Math.max(
+    Math.floor(pw / pieceW) * Math.floor(ph / pieceH),
+    Math.floor(pw / pieceH) * Math.floor(ph / pieceW)
+  );
   document.getElementById('cover-ups-output').textContent = coverUps > 0 ? coverUps : '—';
+  if (!coverUps) return resetAll();
 
-  if (!coverUps) return reset();
-
-  // Sheets
-  const coverSheets = Math.ceil(qty / coverUps);
-  document.getElementById('cover-sheets-output').textContent = coverSheets;
-
-  // Paper cost
-  const coverPaperCost = coverSheets * coverPaper.price;
-  document.getElementById('cover-paper-cost-output').textContent = coverPaperCost.toFixed(2);
-
-  // Print cost
+  // ── Cover rates ───────────────────────────────────────────────────────────
   const coverColours    = parseInt(document.querySelector('input[name="cover_colours"]:checked')?.value) || 0;
   const coverSides      = parseInt(document.querySelector('input[name="cover_sides"]:checked')?.value)   || 0;
   const coverColourRate = coverColours === 1 ? 0.012 : coverColours === 4 ? 0.075 : null;
-  const coverPrintCost  = (coverColourRate !== null && coverSides > 0) ? coverSheets * coverSides * coverColourRate : null;
-  document.getElementById('cover-print-cost-output').textContent = coverPrintCost !== null ? coverPrintCost.toFixed(2) : '—';
+  const coverLam        = document.getElementById('cover_lam')?.value;
+  const coverLamRate    = coverLam === '1 side' ? 0.05 : coverLam === '2 sides' ? 0.10 : null;
 
-  // Lamination cost
-  const coverLam     = document.getElementById('cover_lam')?.value;
-  const coverLamRate = coverLam === '1 side' ? 0.05 : coverLam === '2 sides' ? 0.10 : null;
-  const coverLamCost = coverLamRate !== null ? coverSheets * coverLamRate : null;
-  document.getElementById('cover-lam-cost-output').textContent = coverLamCost !== null ? coverLamCost.toFixed(2) : '—';
-
-  // ── Content ──────────────────────────────────────────────────────────────
-  const contentOutputs = ['content-ups-output','content-sheets-output','content-paper-cost-output',
-                          'content-print-cost-output','content-lam-cost-output'];
-  const resetContent = () => contentOutputs.forEach(id => { document.getElementById(id).textContent = '—'; });
-
+  // ── Content ups ───────────────────────────────────────────────────────────
   const printedPages   = parseFloat(document.getElementById('printed_pages')?.value) || 0;
   const contentPaperId = document.getElementById('content_paper')?.value;
+  let contentUps = 0, contentPaper = null, contentColourRate = null, contentLamRate = null;
+  let contentSides = 0;
 
-  if (!printedPages || !contentPaperId) { resetContent(); updateQuote(); return; }
-
-  const contentPaper = papers.find(p => p.id === contentPaperId);
-  if (!contentPaper) { resetContent(); updateQuote(); return; }
-
-  // Number of Ups (same bleed, open size, content paper sheet dimensions)
-  const cpw = contentPaper.width;
-  const cph = contentPaper.height;
-  const cOpt1      = Math.floor(cpw / pieceW) * Math.floor(cph / pieceH);
-  const cOpt2      = Math.floor(cpw / pieceH) * Math.floor(cph / pieceW);
-  const contentUps = Math.max(cOpt1, cOpt2);
-
+  if (printedPages && contentPaperId) {
+    contentPaper = papers.find(p => p.id === contentPaperId);
+    if (contentPaper) {
+      const cpw = contentPaper.width, cph = contentPaper.height;
+      contentUps = Math.max(
+        Math.floor(cpw / pieceW) * Math.floor(cph / pieceH),
+        Math.floor(cpw / pieceH) * Math.floor(cph / pieceW)
+      );
+      const contentColours = parseInt(document.querySelector('input[name="content_colours"]:checked')?.value) || 0;
+      contentSides         = parseInt(document.querySelector('input[name="content_sides"]:checked')?.value)   || 0;
+      contentColourRate    = contentColours === 1 ? 0.012 : contentColours === 4 ? 0.075 : null;
+      const contentLam     = document.getElementById('content_lam')?.value;
+      contentLamRate       = contentLam === '1 side' ? 0.05 : contentLam === '2 sides' ? 0.10 : null;
+    }
+  }
   document.getElementById('content-ups-output').textContent = contentUps > 0 ? contentUps : '—';
-  if (!contentUps) { resetContent(); updateQuote(); return; }
 
-  // Each sheet = 4 printed pages → sheets needed per booklet = printedPages / 4
-  const sheetsPerBooklet  = printedPages / 4;
-  const contentSheets     = Math.ceil((qty * sheetsPerBooklet) / contentUps);
-  document.getElementById('content-sheets-output').textContent = contentSheets;
-
-  // Paper cost
-  const contentPaperCost = contentSheets * contentPaper.price;
-  document.getElementById('content-paper-cost-output').textContent = contentPaperCost.toFixed(2);
-
-  // Print cost
-  const contentColours    = parseInt(document.querySelector('input[name="content_colours"]:checked')?.value) || 0;
-  const contentSides      = parseInt(document.querySelector('input[name="content_sides"]:checked')?.value)   || 0;
-  const contentColourRate = contentColours === 1 ? 0.012 : contentColours === 4 ? 0.075 : null;
-  const contentPrintCost  = (contentColourRate !== null && contentSides > 0) ? contentSheets * contentSides * contentColourRate : null;
-  document.getElementById('content-print-cost-output').textContent = contentPrintCost !== null ? contentPrintCost.toFixed(2) : '—';
-
-  // Lamination cost
-  const contentLam     = document.getElementById('content_lam')?.value;
-  const contentLamRate = contentLam === '1 side' ? 0.05 : contentLam === '2 sides' ? 0.10 : null;
-  const contentLamCost = contentLamRate !== null ? contentSheets * contentLamRate : null;
-  document.getElementById('content-lam-cost-output').textContent = contentLamCost !== null ? contentLamCost.toFixed(2) : '—';
-
-  // ── Binding ───────────────────────────────────────────────────────────────
+  // ── Binding rates ─────────────────────────────────────────────────────────
   const bindingRates = {
-    'Saddle-stitch': { setup: 50,  run: 0.50 },
-    'Perfect Bind':  { setup: 50,  run: 2.00 },
-    'Wire-O':        { setup: 15,  run: 1.50 },
+    'Saddle-stitch': { setup: 50, run: 0.50 },
+    'Perfect Bind':  { setup: 50, run: 2.00 },
+    'Wire-O':        { setup: 15, run: 1.50 },
   };
   const bindingType = document.querySelector('input[name="binding"]:checked')?.value;
   const rate        = bindingRates[bindingType];
 
-  let bindingTotal = 0;
+  // ── Per-quantity calculation ───────────────────────────────────────────────
+  function calcForQty(qty) {
+    const coverSheets    = Math.ceil(qty / coverUps);
+    const coverPaperCost = coverSheets * coverPaper.price;
+    const coverPrintCost = (coverColourRate !== null && coverSides > 0) ? coverSheets * coverSides * coverColourRate : 0;
+    const coverLamCost   = coverLamRate !== null ? coverSheets * coverLamRate : 0;
+    const coverTotal     = coverPaperCost + coverPrintCost + coverLamCost;
+
+    let contentTotal = 0, contentSheets = 0, contentPaperCost = 0, contentPrintCost = 0, contentLamCost = 0;
+    if (contentUps > 0 && contentPaper) {
+      contentSheets    = Math.ceil((qty * printedPages / 4) / contentUps);
+      contentPaperCost = contentSheets * contentPaper.price;
+      contentPrintCost = (contentColourRate !== null && contentSides > 0) ? contentSheets * contentSides * contentColourRate : 0;
+      contentLamCost   = contentLamRate !== null ? contentSheets * contentLamRate : 0;
+      contentTotal     = contentPaperCost + contentPrintCost + contentLamCost;
+    }
+
+    const bindingTotal   = rate ? rate.setup + qty * rate.run : 0;
+    const suggestedPrice = coverTotal * 2 + contentTotal * 2 + 20 + bindingTotal;
+
+    return { coverSheets, coverPaperCost, coverPrintCost, coverLamCost, coverTotal,
+             contentSheets, contentPaperCost, contentPrintCost, contentLamCost, contentTotal,
+             bindingTotal, suggestedPrice };
+  }
+
+  // ── Display detailed breakdown for first quantity ─────────────────────────
+  const first = calcForQty(qtys[0]);
+
+  document.getElementById('cover-sheets-output').textContent     = first.coverSheets;
+  document.getElementById('cover-paper-cost-output').textContent = first.coverPaperCost.toFixed(2);
+  document.getElementById('cover-print-cost-output').textContent = (coverColourRate !== null && coverSides > 0) ? first.coverPrintCost.toFixed(2) : '—';
+  document.getElementById('cover-lam-cost-output').textContent   = coverLamRate !== null ? first.coverLamCost.toFixed(2) : '—';
+
+  document.getElementById('content-sheets-output').textContent     = contentUps > 0 ? first.contentSheets : '—';
+  document.getElementById('content-paper-cost-output').textContent = contentUps > 0 ? first.contentPaperCost.toFixed(2) : '—';
+  document.getElementById('content-print-cost-output').textContent = (contentUps > 0 && contentColourRate !== null && contentSides > 0) ? first.contentPrintCost.toFixed(2) : '—';
+  document.getElementById('content-lam-cost-output').textContent   = (contentUps > 0 && contentLamRate !== null) ? first.contentLamCost.toFixed(2) : '—';
+
   if (rate) {
-    const bindingSetup = rate.setup;
-    const bindingRun   = qty * rate.run;
-    bindingTotal       = bindingSetup + bindingRun;
-    document.getElementById('binding-setup-output').textContent = bindingSetup.toFixed(2);
-    document.getElementById('binding-run-output').textContent   = bindingRun.toFixed(2);
-    document.getElementById('binding-total-output').textContent = bindingTotal.toFixed(2);
+    document.getElementById('binding-setup-output').textContent = rate.setup.toFixed(2);
+    document.getElementById('binding-run-output').textContent   = (qtys[0] * rate.run).toFixed(2);
+    document.getElementById('binding-total-output').textContent = first.bindingTotal.toFixed(2);
   } else {
     ['binding-setup-output','binding-run-output','binding-total-output']
       .forEach(id => { document.getElementById(id).textContent = '—'; });
   }
 
-  // ── Totals ────────────────────────────────────────────────────────────────
-  const coverTotal   = coverPaperCost + (coverPrintCost || 0) + (coverLamCost || 0);
-  const contentTotal = contentPaperCost + (contentPrintCost || 0) + (contentLamCost || 0);
-  const totalCost    = coverTotal + contentTotal + bindingTotal;
+  // ── Price list for all quantities ─────────────────────────────────────────
+  const rows = qtys.map(qty => {
+    const r = calcForQty(qty);
+    const price   = r.suggestedPrice.toFixed(2);
+    const perUnit = (r.suggestedPrice / qty).toFixed(2);
+    return `
+      <div class="qty-price-row" data-qty="${qty}" data-price="${price}" data-perunit="${perUnit}">
+        <span class="qty-price-label">Qty ${qty.toLocaleString()}</span>
+        <span class="qty-price-value">
+          $${price} + GST
+          <br><span class="qty-price-unit">($${perUnit} per booklet)</span>
+        </span>
+      </div>`;
+  }).join('');
 
-  document.getElementById('booklet-total-cost-output').textContent = totalCost.toFixed(2);
-
-  const suggestedPrice = coverTotal * 2 + contentTotal * 2 + 20 + bindingTotal;
-  document.getElementById('price-output').textContent = suggestedPrice.toFixed(2);
-  document.getElementById('price-per-unit').textContent = qty > 0 ? `$${(suggestedPrice / qty).toFixed(2)} per booklet` : '';
+  document.getElementById('qty-prices-output').innerHTML = `
+    <div class="calc-section-label" style="font-size:0.75rem;font-weight:600;color:#666;margin-top:12px;">Price</div>
+    ${rows}`;
 
   updateQuote();
 }
@@ -1335,12 +1390,20 @@ function updateQuote() {
     const contentLamStr   = (contentLamSides && contentLamSides !== 'None')
                             ? `${contentLamType} ${contentLamSides}`.trim() : 'None';
 
-    // Binding & price
-    const bindingType   = document.querySelector('input[name="binding"]:checked')?.value || '';
-    const price         = document.getElementById('price-output')?.textContent || '—';
-    const pricePerUnit  = document.getElementById('price-per-unit')?.textContent || '';
+    // Binding & quantities
+    const bindingType = document.querySelector('input[name="binding"]:checked')?.value || '';
+    const qtys        = [...document.querySelectorAll('.qty-input')]
+                          .map(el => parseFloat(el.value)).filter(v => v > 0);
 
     const coverPrintedPages = coverSides === 2 ? '4pp' : coverSides === 1 ? '2pp' : '';
+
+    // Build price lines from the rendered qty-prices-output rows
+    const qtyPriceLines = qtys.map(q => {
+      const el = document.querySelector(`[data-qty="${q}"]`);
+      const price    = el ? el.dataset.price    : '';
+      const perUnit  = el ? el.dataset.perunit  : '';
+      return price ? `Qty ${q.toLocaleString()}: $${price} + GST (${perUnit}/booklet)` : '';
+    }).filter(Boolean);
 
     const heading = `<strong><u>${projectName ? projectName + ' ' : ''}Booklet</u></strong>`;
     const lines = [
@@ -1360,10 +1423,9 @@ function updateQuote() {
       contentColourStr       ? `Colour: ${contentColourStr}`           : '',
       `Lamination: ${contentLamStr}`,
       '',
-      bindingType        ? `Binding: ${bindingType}`                   : '',
-      qty                ? `Quantity: ${qty}`                           : '',
-      price !== '—'      ? `Price: $${price} + GST`                     : '',
-      pricePerUnit       ? `(${pricePerUnit})`                          : '',
+      bindingType            ? `Binding: ${bindingType}`               : '',
+      '',
+      ...qtyPriceLines,
     ].filter(l => l !== undefined);
 
     quoteEl.innerHTML = lines.map(l => `<div class="quote-line">${l}</div>`).join('');

@@ -535,10 +535,11 @@
               <span class="calc-row-label">Folding Cost</span>
               <span class="calc-row-value" id="folding-cost-output">—</span>
             </div>
-            <div class="calc-row total">
+            <div class="calc-row total" id="brochure-total-row">
               <span class="calc-row-label">Total Cost for Job</span>
               <span class="calc-row-value" id="total-cost-output">—</span>
             </div>
+            <div id="brochure-qty-prices-output"></div>
           </div>
 
           <!-- Booklet rows -->
@@ -825,7 +826,7 @@ const PRODUCTS = {
     sections: [
       {
         fields: [
-          { id: 'qty',         label: 'Quantity',          type: 'number', placeholder: 'e.g. 500' },
+          { id: 'qty_list', type: 'qty-list' },
           { id: 'paper',       label: 'Paper Type',        type: 'paper-select' },
           { id: 'open_size',   label: 'Open Size',         type: 'size',   ids: ['open_w',   'open_h']   },
           { id: 'bleed',       label: 'Bleed on All Sides', type: 'bleed-input' },
@@ -1067,81 +1068,103 @@ function calculatePrice() {
   if (product === 'booklet') { calculateBooklet(); return; }
   if (product !== 'brochure') { updateQuote(); return; }
 
-  const upsEl       = document.getElementById('ups-output');
-  const sheetsEl    = document.getElementById('sheets-output');
-  const paperCostEl = document.getElementById('paper-cost-output');
-  const printCostEl = document.getElementById('printing-cost-output');
-  const lamCostEl   = document.getElementById('lam-cost-output');
-  const foldCostEl  = document.getElementById('folding-cost-output');
-  const totalCostEl = document.getElementById('total-cost-output');
-  const priceOutEl  = document.getElementById('price-output');
+  const upsEl = document.getElementById('ups-output');
   if (!upsEl) { updateQuote(); return; }
 
-  const reset = () => {
-    [upsEl, sheetsEl, paperCostEl, printCostEl, lamCostEl, foldCostEl, totalCostEl, priceOutEl]
-      .forEach(el => { el.textContent = '—'; });
+  const resetDetail = () => {
+    ['ups-output','sheets-output','paper-cost-output','printing-cost-output',
+     'lam-cost-output','folding-cost-output','total-cost-output']
+      .forEach(id => { const el = document.getElementById(id); if (el) el.textContent = '—'; });
+    document.getElementById('brochure-qty-prices-output').innerHTML = '';
   };
 
   const paperId = document.getElementById('paper')?.value;
-  const qty     = parseFloat(document.getElementById('qty')?.value)    || 0;
   const openW   = parseFloat(document.getElementById('open_w')?.value) || 0;
   const openH   = parseFloat(document.getElementById('open_h')?.value) || 0;
   const bleed   = parseFloat(document.getElementById('bleed')?.value)  || 0;
 
-  if (!paperId || !openW || !openH) { reset(); updateQuote(); return; }
+  if (!paperId || !openW || !openH) { resetDetail(); updateQuote(); return; }
 
   const paper = papers.find(p => p.id === paperId);
-  if (!paper) { reset(); updateQuote(); return; }
+  if (!paper) { resetDetail(); updateQuote(); return; }
 
+  // ── Ups (qty-independent) ─────────────────────────────────────────────────
   const pieceW = openW + bleed * 2;
   const pieceH = openH + bleed * 2;
-  const pw = paper.width;
-  const ph = paper.height;
-
-  // Try piece in normal and rotated orientation, take the best fit
-  const opt1 = Math.floor(pw / pieceW) * Math.floor(ph / pieceH);
-  const opt2 = Math.floor(pw / pieceH) * Math.floor(ph / pieceW);
-  const ups  = Math.max(opt1, opt2);
-
+  const ups    = Math.max(
+    Math.floor(paper.width / pieceW) * Math.floor(paper.height / pieceH),
+    Math.floor(paper.width / pieceH) * Math.floor(paper.height / pieceW)
+  );
   upsEl.textContent = ups > 0 ? ups : '—';
+  if (!ups) { resetDetail(); updateQuote(); return; }
 
-  if (ups > 0 && qty > 0) {
+  // ── Rates (qty-independent) ───────────────────────────────────────────────
+  const colours    = parseInt(document.querySelector('input[name="colours"]:checked')?.value) || 0;
+  const sides      = parseInt(document.querySelector('input[name="sides"]:checked')?.value)   || 0;
+  const colourRate = colours === 1 ? 0.012 : colours === 4 ? 0.075 : null;
+  const lamination = document.getElementById('lamination')?.value;
+  const lamRate    = lamination === '1 side' ? 0.05 : lamination === '2 sides' ? 0.10 : null;
+  const foldingVal = document.getElementById('folding')?.value;
+  const numFolds   = foldingVal && foldingVal !== 'None' ? parseInt(foldingVal) : 0;
+
+  // ── Per-qty helper ────────────────────────────────────────────────────────
+  function calcForQty(qty) {
     const sheets    = Math.ceil(qty / ups);
     const paperCost = sheets * paper.price;
-    sheetsEl.textContent    = sheets;
-    paperCostEl.textContent = paperCost.toFixed(2);
-
-    // Printing cost
-    const colours    = parseInt(document.querySelector('input[name="colours"]:checked')?.value) || 0;
-    const sides      = parseInt(document.querySelector('input[name="sides"]:checked')?.value)   || 0;
-    const colourRate = colours === 1 ? 0.012 : colours === 4 ? 0.075 : null;
-    const printCost  = (colourRate !== null && sides > 0) ? sheets * sides * colourRate : 0;
-    printCostEl.textContent = colourRate !== null && sides > 0 ? printCost.toFixed(2) : '—';
-
-    // Lamination cost
-    const lamination = document.getElementById('lamination')?.value;
-    const lamRate    = lamination === '1 side' ? 0.05
-                     : lamination === '2 sides' ? 0.10 : null;
-    const lamCost    = lamRate !== null ? sheets * lamRate : 0;
-    lamCostEl.textContent = lamRate !== null ? lamCost.toFixed(2) : '—';
-
-    // Folding cost
-    const foldingVal = document.getElementById('folding')?.value;
-    const numFolds   = foldingVal && foldingVal !== 'None' ? parseInt(foldingVal) : 0;
-    const foldCost   = numFolds > 0 ? numFolds * 25 * Math.ceil(qty / 1000) : 0;
-    foldCostEl.textContent = foldCost.toFixed(2);
-
-    // Total cost for job
+    const printCost = (colourRate !== null && sides > 0) ? sheets * sides * colourRate : 0;
+    const lamCost   = lamRate !== null ? sheets * lamRate : 0;
+    const foldCost  = numFolds > 0 ? numFolds * 25 * Math.ceil(qty / 1000) : 0;
     const totalCost = paperCost + printCost + lamCost + foldCost;
-    totalCostEl.textContent = totalCost.toFixed(2);
-
-    // Suggested selling price
-    const suggestedPrice = paperCost * 2 + printCost * 2 + foldCost + 10;
-    priceOutEl.textContent = suggestedPrice.toFixed(2);
-  } else {
-    [sheetsEl, paperCostEl, printCostEl, lamCostEl, foldCostEl, totalCostEl, priceOutEl]
-      .forEach(el => { el.textContent = '—'; });
+    const suggested = paperCost * 2 + printCost * 2 + foldCost + 10;
+    return { sheets, paperCost, printCost, lamCost, foldCost, totalCost, suggested };
   }
+
+  const qtys     = [...document.querySelectorAll('.qty-input')]
+                     .map(el => parseFloat(el.value)).filter(v => v > 0);
+  const isSingle = qtys.length === 1;
+
+  // ── Show/hide price display ───────────────────────────────────────────────
+  document.getElementById('price-display').style.display    = isSingle ? '' : 'none';
+  document.getElementById('brochure-total-row').style.display = isSingle ? '' : 'none';
+  document.getElementById('brochure-qty-prices-output').innerHTML = '';
+
+  if (!qtys.length) { resetDetail(); updateQuote(); return; }
+
+  // ── Detailed breakdown for first qty ─────────────────────────────────────
+  const first = calcForQty(qtys[0]);
+  document.getElementById('sheets-output').textContent          = first.sheets;
+  document.getElementById('paper-cost-output').textContent      = first.paperCost.toFixed(2);
+  document.getElementById('printing-cost-output').textContent   = colourRate !== null && sides > 0 ? first.printCost.toFixed(2) : '—';
+  document.getElementById('lam-cost-output').textContent        = lamRate !== null ? first.lamCost.toFixed(2) : '—';
+  document.getElementById('folding-cost-output').textContent    = first.foldCost.toFixed(2);
+
+  if (isSingle) {
+    document.getElementById('total-cost-output').textContent = first.totalCost.toFixed(2);
+    document.getElementById('price-output').textContent      = first.suggested.toFixed(2);
+    updateQuote();
+    return;
+  }
+
+  // ── Multi-qty price list ──────────────────────────────────────────────────
+  document.getElementById('total-cost-output').textContent = '—';
+  const rows = qtys.map(qty => {
+    const r       = calcForQty(qty);
+    const price   = r.suggested.toFixed(2);
+    const perUnit = (r.suggested / qty).toFixed(2);
+    return `
+      <div class="qty-price-row" data-qty="${qty}" data-price="${price}" data-perunit="${perUnit}">
+        <span class="qty-price-label">Qty ${qty.toLocaleString()}</span>
+        <span class="qty-price-value">
+          $${price} + GST
+          <br><span class="qty-price-unit">($${perUnit} per brochure)</span>
+        </span>
+      </div>`;
+  }).join('');
+
+  document.getElementById('brochure-qty-prices-output').innerHTML = `
+    <div class="calc-section-label" style="font-size:0.75rem;font-weight:600;color:#666;margin-top:12px;">Price</div>
+    ${rows}`;
+
   updateQuote();
 }
 
@@ -1345,7 +1368,6 @@ function updateQuote() {
     const openH   = document.getElementById('open_h')?.value   || '';
     const closedW = document.getElementById('closed_w')?.value || '';
     const closedH = document.getElementById('closed_h')?.value || '';
-    const qty     = document.getElementById('qty')?.value      || '';
 
     const colours = parseInt(document.querySelector('input[name="colours"]:checked')?.value) || 0;
     const sides   = parseInt(document.querySelector('input[name="sides"]:checked')?.value)   || 0;
@@ -1358,20 +1380,31 @@ function updateQuote() {
     const lamination = document.getElementById('lamination')?.value || '';
     const lamStr     = (lamination && lamination !== 'None' && lamination !== '')
                        ? `${lamType} ${lamination}`.trim() : 'None';
+    const folding    = document.getElementById('folding')?.value || '';
 
-    const folding = document.getElementById('folding')?.value || '';
-    const price   = document.getElementById('price-output')?.textContent || '—';
+    const qtys     = [...document.querySelectorAll('.qty-input')]
+                       .map(el => parseFloat(el.value)).filter(v => v > 0);
+    const isSingle = qtys.length === 1;
+
+    const qtyPriceLines = isSingle
+      ? [ qtys[0] ? `Quantity: ${qtys[0].toLocaleString()}` : '',
+          document.getElementById('price-output')?.textContent !== '—'
+            ? `Price: $${document.getElementById('price-output').textContent} + GST` : '' ]
+      : qtys.map(q => {
+          const el = document.querySelector(`#brochure-qty-prices-output [data-qty="${q}"]`);
+          return el ? `Qty ${q.toLocaleString()}: $${el.dataset.price} + GST ($${el.dataset.perunit}/brochure)` : '';
+        });
 
     const heading = `<strong><u>${projectName ? projectName + ' ' : ''}Brochure</u></strong>`;
     const lines   = [
       heading,
-      openW && openH   ? `Open Size: ${openW}mm x ${openH}mm`     : '',
+      openW && openH     ? `Open Size: ${openW}mm x ${openH}mm`       : '',
       closedW && closedH ? `Closed Size: ${closedW}mm x ${closedH}mm` : '',
-      colourStr          ? `Colour: ${colourStr}`                   : '',
+      colourStr          ? `Colour: ${colourStr}`                       : '',
       `Lamination: ${lamStr}`,
-      folding            ? `Folding: ${folding}`                    : '',
-      qty                ? `Quantity: ${qty}`                       : '',
-      price !== '—'      ? `Price: $${price}`                       : '',
+      folding            ? `Folding: ${folding}`                        : '',
+      '',
+      ...qtyPriceLines,
     ].filter(Boolean);
 
     quoteEl.innerHTML = lines.map(l => `<div class="quote-line">${l}</div>`).join('');

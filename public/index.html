@@ -603,6 +603,11 @@
               <span class="calc-row-value" id="binding-total-output">—</span>
             </div>
 
+            <div id="booklet-total-row" class="calc-row total" style="margin-top:8px;display:none;">
+              <span class="calc-row-label">Total Cost for Job</span>
+              <span class="calc-row-value" id="booklet-total-cost-output">—</span>
+            </div>
+
             <div id="qty-prices-output"></div>
           </div>
 
@@ -611,6 +616,7 @@
           <div class="price-label">Suggested Selling Price</div>
           <div class="price-value" id="price-output">—</div>
           <div class="price-note"  id="price-note"></div>
+          <div class="price-note"  id="price-per-unit" style="margin-top:4px;font-size:0.8rem;"></div>
         </div>
       </div>
     </div>
@@ -1040,7 +1046,7 @@ function renderCalculatorForm(key) {
   document.getElementById('calc-rows').style.display      = (key === 'brochure' || key === 'booklet') ? '' : 'none';
   document.getElementById('brochure-rows').style.display  = key === 'brochure' ? '' : 'none';
   document.getElementById('booklet-rows').style.display   = key === 'booklet'  ? '' : 'none';
-  document.getElementById('price-display').style.display  = key === 'booklet'  ? 'none' : '';
+  document.getElementById('price-display').style.display  = key === 'booklet'  ? 'none' : '';  // hidden until qty entered
   updateQuote();
 }
 
@@ -1282,9 +1288,26 @@ function calculateBooklet() {
       .forEach(id => { document.getElementById(id).textContent = '—'; });
   }
 
-  // ── Price list for all quantities ─────────────────────────────────────────
+  const isSingle = qtys.length === 1;
+
+  // ── Single qty: show total cost row + price display ───────────────────────
+  document.getElementById('booklet-total-row').style.display  = isSingle ? '' : 'none';
+  document.getElementById('price-display').style.display      = isSingle ? '' : 'none';
+  document.getElementById('qty-prices-output').innerHTML      = '';
+
+  if (isSingle) {
+    const r = calcForQty(qtys[0]);
+    const totalCost = r.coverTotal + r.contentTotal + r.bindingTotal;
+    document.getElementById('booklet-total-cost-output').textContent = totalCost.toFixed(2);
+    document.getElementById('price-output').textContent     = r.suggestedPrice.toFixed(2);
+    document.getElementById('price-per-unit').textContent   = `$${(r.suggestedPrice / qtys[0]).toFixed(2)} per booklet`;
+    updateQuote();
+    return;
+  }
+
+  // ── Multi qty: show price list ────────────────────────────────────────────
   const rows = qtys.map(qty => {
-    const r = calcForQty(qty);
+    const r       = calcForQty(qty);
     const price   = r.suggestedPrice.toFixed(2);
     const perUnit = (r.suggestedPrice / qty).toFixed(2);
     return `

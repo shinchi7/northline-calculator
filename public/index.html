@@ -479,6 +479,25 @@
               <span class="calc-row-label">Total Lamination Cost</span>
               <span class="calc-row-value" id="content-lam-cost-output">—</span>
             </div>
+
+            <div class="calc-section-label" style="font-size:0.75rem;font-weight:600;color:#666;margin-top:12px;">Binding</div>
+            <div class="calc-row">
+              <span class="calc-row-label">Setup Cost</span>
+              <span class="calc-row-value" id="binding-setup-output">—</span>
+            </div>
+            <div class="calc-row">
+              <span class="calc-row-label">Run Cost</span>
+              <span class="calc-row-value" id="binding-run-output">—</span>
+            </div>
+            <div class="calc-row">
+              <span class="calc-row-label">Total Binding Cost</span>
+              <span class="calc-row-value" id="binding-total-output">—</span>
+            </div>
+
+            <div class="calc-row total" style="margin-top:8px;">
+              <span class="calc-row-label">Total Cost for Job</span>
+              <span class="calc-row-value" id="booklet-total-cost-output">—</span>
+            </div>
           </div>
 
         </div>
@@ -1099,6 +1118,38 @@ function calculateBooklet() {
   const contentLamRate = contentLam === '1 side' ? 0.05 : contentLam === '2 sides' ? 0.10 : null;
   const contentLamCost = contentLamRate !== null ? contentSheets * contentLamRate : null;
   document.getElementById('content-lam-cost-output').textContent = contentLamCost !== null ? contentLamCost.toFixed(2) : '—';
+
+  // ── Binding ───────────────────────────────────────────────────────────────
+  const bindingRates = {
+    'Saddle-stitch': { setup: 50,  run: 0.50 },
+    'Perfect Bind':  { setup: 50,  run: 2.00 },
+    'Wire-O':        { setup: 15,  run: 1.50 },
+  };
+  const bindingType = document.querySelector('input[name="binding"]:checked')?.value;
+  const rate        = bindingRates[bindingType];
+
+  let bindingTotal = 0;
+  if (rate) {
+    const bindingSetup = rate.setup;
+    const bindingRun   = qty * rate.run;
+    bindingTotal       = bindingSetup + bindingRun;
+    document.getElementById('binding-setup-output').textContent = bindingSetup.toFixed(2);
+    document.getElementById('binding-run-output').textContent   = bindingRun.toFixed(2);
+    document.getElementById('binding-total-output').textContent = bindingTotal.toFixed(2);
+  } else {
+    ['binding-setup-output','binding-run-output','binding-total-output']
+      .forEach(id => { document.getElementById(id).textContent = '—'; });
+  }
+
+  // ── Totals ────────────────────────────────────────────────────────────────
+  const coverTotal   = coverPaperCost + (coverPrintCost || 0) + (coverLamCost || 0);
+  const contentTotal = contentPaperCost + (contentPrintCost || 0) + (contentLamCost || 0);
+  const totalCost    = coverTotal + contentTotal + bindingTotal;
+
+  document.getElementById('booklet-total-cost-output').textContent = totalCost.toFixed(2);
+
+  const suggestedPrice = coverTotal * 2 + contentTotal * 2 + 20 + bindingTotal;
+  document.getElementById('price-output').textContent = suggestedPrice.toFixed(2);
 
   updateQuote();
 }

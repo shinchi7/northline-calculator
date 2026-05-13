@@ -398,35 +398,67 @@
     <div class="calc-right">
       <div class="card">
         <div id="calc-rows" style="display:none">
-          <div class="calc-section-label">Calculation</div>
-          <div class="calc-row">
-            <span class="calc-row-label">Number of Ups</span>
-            <span class="calc-row-value" id="ups-output">—</span>
+
+          <!-- Brochure rows -->
+          <div id="brochure-rows">
+            <div class="calc-section-label">Calculation</div>
+            <div class="calc-row">
+              <span class="calc-row-label">Number of Ups</span>
+              <span class="calc-row-value" id="ups-output">—</span>
+            </div>
+            <div class="calc-row">
+              <span class="calc-row-label">Number of Sheets Total</span>
+              <span class="calc-row-value" id="sheets-output">—</span>
+            </div>
+            <div class="calc-row">
+              <span class="calc-row-label">Total Paper Cost</span>
+              <span class="calc-row-value" id="paper-cost-output">—</span>
+            </div>
+            <div class="calc-row">
+              <span class="calc-row-label">Printing Cost</span>
+              <span class="calc-row-value" id="printing-cost-output">—</span>
+            </div>
+            <div class="calc-row">
+              <span class="calc-row-label">Lamination Cost</span>
+              <span class="calc-row-value" id="lam-cost-output">—</span>
+            </div>
+            <div class="calc-row">
+              <span class="calc-row-label">Folding Cost</span>
+              <span class="calc-row-value" id="folding-cost-output">—</span>
+            </div>
+            <div class="calc-row total">
+              <span class="calc-row-label">Total Cost for Job</span>
+              <span class="calc-row-value" id="total-cost-output">—</span>
+            </div>
           </div>
-          <div class="calc-row">
-            <span class="calc-row-label">Number of Sheets Total</span>
-            <span class="calc-row-value" id="sheets-output">—</span>
+
+          <!-- Booklet rows -->
+          <div id="booklet-rows" style="display:none">
+            <div class="calc-section-label">Calculation</div>
+
+            <div class="calc-section-label" style="font-size:0.75rem;font-weight:600;color:#666;margin-top:4px;">Cover</div>
+            <div class="calc-row">
+              <span class="calc-row-label">Number of Ups</span>
+              <span class="calc-row-value" id="cover-ups-output">—</span>
+            </div>
+            <div class="calc-row">
+              <span class="calc-row-label">Number of Sheets Total</span>
+              <span class="calc-row-value" id="cover-sheets-output">—</span>
+            </div>
+            <div class="calc-row">
+              <span class="calc-row-label">Total Paper Cost</span>
+              <span class="calc-row-value" id="cover-paper-cost-output">—</span>
+            </div>
+            <div class="calc-row">
+              <span class="calc-row-label">Total Print Cost</span>
+              <span class="calc-row-value" id="cover-print-cost-output">—</span>
+            </div>
+            <div class="calc-row">
+              <span class="calc-row-label">Total Lamination Cost</span>
+              <span class="calc-row-value" id="cover-lam-cost-output">—</span>
+            </div>
           </div>
-          <div class="calc-row">
-            <span class="calc-row-label">Total Paper Cost</span>
-            <span class="calc-row-value" id="paper-cost-output">—</span>
-          </div>
-          <div class="calc-row">
-            <span class="calc-row-label">Printing Cost</span>
-            <span class="calc-row-value" id="printing-cost-output">—</span>
-          </div>
-          <div class="calc-row">
-            <span class="calc-row-label">Lamination Cost</span>
-            <span class="calc-row-value" id="lam-cost-output">—</span>
-          </div>
-          <div class="calc-row">
-            <span class="calc-row-label">Folding Cost</span>
-            <span class="calc-row-value" id="folding-cost-output">—</span>
-          </div>
-          <div class="calc-row total">
-            <span class="calc-row-label">Total Cost for Job</span>
-            <span class="calc-row-value" id="total-cost-output">—</span>
-          </div>
+
         </div>
         <div class="price-display">
           <div class="price-label">Suggested Selling Price</div>
@@ -676,6 +708,7 @@ const PRODUCTS = {
         label: 'Content',
         fields: [
           { id: 'content_paper',   label: 'Paper Type',        type: 'paper-select' },
+          { id: 'printed_pages',   label: 'Printed Pages',     type: 'number', placeholder: 'e.g. 16' },
           { id: 'content_colours', label: 'Number of Colours', type: 'radio',  options: ['1', '4'] },
           { id: 'content_sides',   label: 'Printing Sides',    type: 'radio',  options: ['0', '1', '2'] },
           { id: 'content_lam',     label: 'Lamination',        type: 'select', options: ['None', 'Normal 1 side', 'Normal 2 side'] },
@@ -842,7 +875,9 @@ function renderCalculatorForm(key) {
   });
 
   document.getElementById('product-form').innerHTML = html;
-  document.getElementById('calc-rows').style.display = key === 'brochure' ? '' : 'none';
+  document.getElementById('calc-rows').style.display      = (key === 'brochure' || key === 'booklet') ? '' : 'none';
+  document.getElementById('brochure-rows').style.display  = key === 'brochure' ? '' : 'none';
+  document.getElementById('booklet-rows').style.display   = key === 'booklet'  ? '' : 'none';
   updateQuote();
 }
 
@@ -860,6 +895,7 @@ document.getElementById('product-select').addEventListener('change', function ()
 
 function calculatePrice() {
   const product = document.getElementById('product-select').value;
+  if (product === 'booklet') { calculateBooklet(); return; }
   if (product !== 'brochure') { updateQuote(); return; }
 
   const upsEl       = document.getElementById('ups-output');
@@ -937,6 +973,63 @@ function calculatePrice() {
     [sheetsEl, paperCostEl, printCostEl, lamCostEl, foldCostEl, totalCostEl, priceOutEl]
       .forEach(el => { el.textContent = '—'; });
   }
+  updateQuote();
+}
+
+// ─── Booklet calculator ───────────────────────────────────────────────────────
+function calculateBooklet() {
+  const coverOutputs = ['cover-ups-output','cover-sheets-output','cover-paper-cost-output',
+                        'cover-print-cost-output','cover-lam-cost-output'];
+  const reset = () => {
+    coverOutputs.forEach(id => { const el = document.getElementById(id); if (el) el.textContent = '—'; });
+    updateQuote();
+  };
+
+  const qty          = parseFloat(document.getElementById('qty')?.value)        || 0;
+  const openW        = parseFloat(document.getElementById('open_w')?.value)     || 0;
+  const openH        = parseFloat(document.getElementById('open_h')?.value)     || 0;
+  const coverPaperId = document.getElementById('cover_paper')?.value;
+
+  if (!qty || !openW || !openH || !coverPaperId) return reset();
+
+  const coverPaper = papers.find(p => p.id === coverPaperId);
+  if (!coverPaper) return reset();
+
+  // Number of Ups (bleed 3mm)
+  const bleed  = 3;
+  const pieceW = openW + bleed * 2;
+  const pieceH = openH + bleed * 2;
+  const pw = coverPaper.width;
+  const ph = coverPaper.height;
+  const opt1     = Math.floor(pw / pieceW) * Math.floor(ph / pieceH);
+  const opt2     = Math.floor(pw / pieceH) * Math.floor(ph / pieceW);
+  const coverUps = Math.max(opt1, opt2);
+
+  document.getElementById('cover-ups-output').textContent = coverUps > 0 ? coverUps : '—';
+
+  if (!coverUps) return reset();
+
+  // Sheets
+  const coverSheets = Math.ceil(qty / coverUps);
+  document.getElementById('cover-sheets-output').textContent = coverSheets;
+
+  // Paper cost
+  const coverPaperCost = coverSheets * coverPaper.price;
+  document.getElementById('cover-paper-cost-output').textContent = coverPaperCost.toFixed(2);
+
+  // Print cost
+  const coverColours    = parseInt(document.querySelector('input[name="cover_colours"]:checked')?.value) || 0;
+  const coverSides      = parseInt(document.querySelector('input[name="cover_sides"]:checked')?.value)   || 0;
+  const coverColourRate = coverColours === 1 ? 0.012 : coverColours === 4 ? 0.075 : null;
+  const coverPrintCost  = (coverColourRate !== null && coverSides > 0) ? coverSheets * coverSides * coverColourRate : null;
+  document.getElementById('cover-print-cost-output').textContent = coverPrintCost !== null ? coverPrintCost.toFixed(2) : '—';
+
+  // Lamination cost
+  const coverLam     = document.getElementById('cover_lam')?.value;
+  const coverLamRate = coverLam === 'Normal 1 side' ? 0.05 : coverLam === 'Normal 2 side' ? 0.10 : null;
+  const coverLamCost = coverLamRate !== null ? coverSheets * coverLamRate : null;
+  document.getElementById('cover-lam-cost-output').textContent = coverLamCost !== null ? coverLamCost.toFixed(2) : '—';
+
   updateQuote();
 }
 

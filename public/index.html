@@ -7,16 +7,73 @@
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: #f2f2f2;
-      color: #1a1a1a;
-      min-height: 100vh;
+    :root {
+      --bg-page:    #f2f2f2;
+      --bg-card:    #fff;
+      --bg-input:   #fff;
+      --bg-hover:   #f4f4f4;
+      --bg-price:   #f7f7f7;
+      --bg-topbar:  #fff;
+      --border:     #e4e4e4;
+      --border-sub: #efefef;
+      --border-row: #f5f5f5;
+      --text:       #1a1a1a;
+      --text-muted: #888;
+      --text-dim:   #bbb;
+      --text-label: #999;
+      --accent:     #1a1a1a;
+      --accent-fg:  #fff;
     }
 
+    body.dark {
+      --bg-page:    #111;
+      --bg-card:    #1e1e1e;
+      --bg-input:   #2a2a2a;
+      --bg-hover:   #2a2a2a;
+      --bg-price:   #252525;
+      --bg-topbar:  #1a1a1a;
+      --border:     #333;
+      --border-sub: #2a2a2a;
+      --border-row: #272727;
+      --text:       #f0f0f0;
+      --text-muted: #888;
+      --text-dim:   #555;
+      --text-label: #666;
+      --accent:     #f0f0f0;
+      --accent-fg:  #111;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg-page);
+      color: var(--text);
+      min-height: 100vh;
+      transition: background 0.2s, color 0.2s;
+    }
+
+    .dark-toggle {
+      background: none;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      padding: 6px 8px;
+      cursor: pointer;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s, color 0.15s;
+      margin-left: 12px;
+    }
+    .dark-toggle:hover { background: var(--bg-hover); color: var(--text); }
+    .dark-toggle svg { width: 16px; height: 16px; display: block; }
+    .icon-moon { display: block; }
+    .icon-sun  { display: none; }
+    body.dark .icon-moon { display: none; }
+    body.dark .icon-sun  { display: block; }
+
     .top-bar {
-      background: #fff;
-      border-bottom: 1px solid #ebebeb;
+      background: var(--bg-topbar);
+      border-bottom: 1px solid var(--border-sub);
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -29,6 +86,8 @@
 
     .top-bar h1 { font-size: 0.95rem; font-weight: 600; letter-spacing: -0.2px; }
 
+    .top-bar-right { display: flex; align-items: center; gap: 4px; }
+
     .nav-tabs { display: flex; gap: 4px; }
 
     .nav-tab {
@@ -38,13 +97,13 @@
       border-radius: 6px;
       font-size: 0.875rem;
       font-weight: 500;
-      color: #999;
+      color: var(--text-label);
       cursor: pointer;
       transition: background 0.15s, color 0.15s;
     }
 
-    .nav-tab:hover  { background: #f4f4f4; color: #1a1a1a; }
-    .nav-tab.active { background: #1a1a1a; color: #fff; }
+    .nav-tab:hover  { background: var(--bg-hover); color: var(--text); }
+    .nav-tab.active { background: var(--accent);   color: var(--accent-fg); }
 
     .page { display: none; padding: 40px 20px 80px; }
 
@@ -94,14 +153,14 @@
 
     .quote-line {
       font-size: 0.85rem;
-      color: #1a1a1a;
+      color: var(--text);
       line-height: 1.7;
       white-space: nowrap;
     }
 
     .quote-empty {
       font-size: 0.82rem;
-      color: #ccc;
+      color: var(--text-dim);
       text-align: center;
       padding: 20px 0;
     }
@@ -112,7 +171,7 @@
     }
 
     .card {
-      background: #fff;
+      background: var(--bg-card);
       border-radius: 14px;
       padding: 28px 32px;
       width: 100%;
@@ -124,7 +183,7 @@
 
     .card-title { font-size: 0.875rem; font-weight: 600; margin-bottom: 20px; }
 
-    .card.editing { border: 1.5px solid #1a1a1a; }
+    .card.editing { border: 1.5px solid var(--accent); }
 
     .field-label {
       display: block;
@@ -132,29 +191,29 @@
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.7px;
-      color: #999;
+      color: var(--text-label);
       margin-bottom: 7px;
     }
 
-    .sub-label { font-size: 0.72rem; color: #bbb; margin-bottom: 5px; }
+    .sub-label { font-size: 0.72rem; color: var(--text-dim); margin-bottom: 5px; }
 
     input[type="text"],
     input[type="number"],
     select {
       width: 100%;
       padding: 10px 13px;
-      border: 1.5px solid #e4e4e4;
+      border: 1.5px solid var(--border);
       border-radius: 8px;
       font-size: 0.92rem;
-      color: #1a1a1a;
-      background: #fff;
+      color: var(--text);
+      background: var(--bg-input);
       -webkit-appearance: none;
       appearance: none;
       outline: none;
       transition: border-color 0.15s;
     }
 
-    input:focus, select:focus { border-color: #1a1a1a; }
+    input:focus, select:focus { border-color: var(--accent); }
 
     .form-group { margin-bottom: 16px; }
 
@@ -179,9 +238,9 @@
 
     .btn:hover { opacity: 0.75; }
 
-    .btn-primary { background: #1a1a1a; color: #fff; }
-    .btn-outline { background: #fff; color: #1a1a1a; border: 1.5px solid #e4e4e4; }
-    .btn-danger  { background: #fff; color: #cc3333; border: 1.5px solid #f5c0c0; }
+    .btn-primary { background: var(--accent);    color: var(--accent-fg); }
+    .btn-outline { background: var(--bg-card);   color: var(--text);     border: 1.5px solid var(--border); }
+    .btn-danger  { background: var(--bg-card);   color: #cc3333;         border: 1.5px solid #f5c0c0; }
     .btn-sm      { padding: 6px 12px; font-size: 0.78rem; }
 
     .btn-row {
@@ -196,8 +255,8 @@
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 1.2px;
-      color: #bbb;
-      border-top: 1px solid #efefef;
+      color: var(--text-dim);
+      border-top: 1px solid var(--border-sub);
       padding-top: 22px;
       margin-top: 8px;
       margin-bottom: 18px;
@@ -215,26 +274,26 @@
       align-items: center;
       justify-content: center;
       padding: 9px 6px;
-      border: 1.5px solid #e4e4e4;
+      border: 1.5px solid var(--border);
       border-radius: 8px;
       cursor: pointer;
       font-size: 0.85rem;
       font-weight: 500;
-      color: #666;
+      color: var(--text-muted);
       white-space: nowrap;
       transition: border-color 0.15s, background 0.15s, color 0.15s;
     }
 
     .radio-option input[type="radio"]:checked + label {
-      border-color: #1a1a1a;
-      background: #1a1a1a;
-      color: #fff;
+      border-color: var(--accent);
+      background: var(--accent);
+      color: var(--accent-fg);
     }
 
     .price-display {
       margin-top: 28px;
       padding: 22px 20px;
-      background: #f7f7f7;
+      background: var(--bg-price);
       border-radius: 10px;
       text-align: center;
     }
@@ -244,13 +303,13 @@
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 1px;
-      color: #bbb;
+      color: var(--text-dim);
       margin-bottom: 8px;
     }
 
-    .price-value { font-size: 2.2rem; font-weight: 700; color: #1a1a1a; letter-spacing: -1px; }
+    .price-value { font-size: 2.2rem; font-weight: 700; color: var(--text); letter-spacing: -1px; }
 
-    .price-note { font-size: 0.78rem; color: #bbb; margin-top: 6px; }
+    .price-note { font-size: 0.78rem; color: var(--text-dim); margin-top: 6px; }
 
     .paper-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
 
@@ -259,17 +318,17 @@
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.7px;
-      color: #bbb;
+      color: var(--text-dim);
       text-align: left;
       padding: 0 12px 12px 0;
-      border-bottom: 1px solid #efefef;
+      border-bottom: 1px solid var(--border-sub);
     }
 
     .paper-table th:last-child { padding-right: 0; }
 
     .paper-table td {
       padding: 12px 12px 12px 0;
-      border-bottom: 1px solid #f5f5f5;
+      border-bottom: 1px solid var(--border-row);
       vertical-align: middle;
     }
 
@@ -278,17 +337,17 @@
 
     .paper-actions { display: flex; gap: 6px; justify-content: flex-end; }
 
-    .empty-state { text-align: center; padding: 32px 0; color: #ccc; font-size: 0.875rem; }
+    .empty-state { text-align: center; padding: 32px 0; color: var(--text-dim); font-size: 0.875rem; }
 
     .paper-notice {
       font-size: 0.83rem;
-      color: #aaa;
+      color: var(--text-muted);
       padding: 10px 13px;
-      border: 1.5px dashed #e4e4e4;
+      border: 1.5px dashed var(--border);
       border-radius: 8px;
     }
 
-    .paper-notice a { color: #1a1a1a; cursor: pointer; text-decoration: underline; font-weight: 500; }
+    .paper-notice a { color: var(--text); cursor: pointer; text-decoration: underline; font-weight: 500; }
 
     .form-error { font-size: 0.8rem; color: #cc3333; margin-top: 10px; min-height: 1.2em; }
 
@@ -299,8 +358,8 @@
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 1.2px;
-      color: #bbb;
-      border-top: 1px solid #efefef;
+      color: var(--text-dim);
+      border-top: 1px solid var(--border-sub);
       padding-top: 22px;
       margin-top: 8px;
       margin-bottom: 18px;
@@ -311,31 +370,31 @@
       justify-content: space-between;
       align-items: center;
       padding: 10px 0;
-      border-bottom: 1px solid #f5f5f5;
+      border-bottom: 1px solid var(--border-row);
       font-size: 0.875rem;
     }
 
     .calc-row:last-child { border-bottom: none; }
 
     .calc-row.total {
-      border-top: 1.5px solid #1a1a1a;
+      border-top: 1.5px solid var(--accent);
       margin-top: 4px;
       padding-top: 14px;
     }
 
-    .calc-row.total .calc-row-label { color: #1a1a1a; font-weight: 600; }
+    .calc-row.total .calc-row-label { color: var(--text); font-weight: 600; }
     .calc-row.total .calc-row-value { font-size: 1.1rem; }
 
-    .calc-row-label { color: #888; }
+    .calc-row-label { color: var(--text-muted); }
 
-    .calc-row-value { font-weight: 600; font-size: 1rem; color: #1a1a1a; }
+    .calc-row-value { font-weight: 600; font-size: 1rem; color: var(--text); }
 
     .input-with-unit { position: relative; }
     .input-with-unit input { padding-right: 40px; }
     .input-unit {
       position: absolute; right: 12px; top: 50%;
       transform: translateY(-50%);
-      color: #bbb; font-size: 0.82rem; pointer-events: none;
+      color: var(--text-dim); font-size: 0.82rem; pointer-events: none;
     }
 
     .edit-badge {
@@ -344,8 +403,8 @@
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.5px;
-      background: #1a1a1a;
-      color: #fff;
+      background: var(--accent);
+      color: var(--accent-fg);
       padding: 2px 7px;
       border-radius: 4px;
       margin-left: 8px;
@@ -357,10 +416,30 @@
 
 <div class="top-bar">
   <h1>Print Pricing</h1>
-  <nav class="nav-tabs">
-    <button class="nav-tab active" onclick="showPage('calculator')">Calculator</button>
-    <button class="nav-tab"        onclick="showPage('papers')">Paper Database</button>
-  </nav>
+  <div class="top-bar-right">
+    <nav class="nav-tabs">
+      <button class="nav-tab active" onclick="showPage('calculator')">Calculator</button>
+      <button class="nav-tab"        onclick="showPage('papers')">Paper Database</button>
+    </nav>
+    <button class="dark-toggle" id="dark-toggle" onclick="toggleDark()" title="Toggle dark mode">
+      <!-- Moon (shown in light mode) -->
+      <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+      </svg>
+      <!-- Sun (shown in dark mode) -->
+      <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="5"/>
+        <line x1="12" y1="1"  x2="12" y2="3"/>
+        <line x1="12" y1="21" x2="12" y2="23"/>
+        <line x1="4.22" y1="4.22"  x2="5.64" y2="5.64"/>
+        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+        <line x1="1"  y1="12" x2="3"  y2="12"/>
+        <line x1="21" y1="12" x2="23" y2="12"/>
+        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+      </svg>
+    </button>
+  </div>
 </div>
 
 <!-- CALCULATOR -->
@@ -1269,8 +1348,8 @@ function updateQuote() {
       '',
       bindingType        ? `Binding: ${bindingType}`                   : '',
       qty                ? `Quantity: ${qty}`                           : '',
-      price !== '—'      ? `Suggested Selling Price: $${price}`        : '',
-      pricePerUnit       ? pricePerUnit                                 : '',
+      price !== '—'      ? `Price: $${price} + GST`                     : '',
+      pricePerUnit       ? `(${pricePerUnit})`                          : '',
     ].filter(l => l !== undefined);
 
     quoteEl.innerHTML = lines.map(l => `<div class="quote-line">${l}</div>`).join('');
@@ -1314,6 +1393,18 @@ function showPage(name) {
   document.getElementById(`page-${name}`).classList.add('active');
   document.querySelector(`.nav-tab[onclick="showPage('${name}')"]`).classList.add('active');
 }
+
+// ─── Dark mode ────────────────────────────────────────────────────────────────
+function toggleDark() {
+  const isDark = document.body.classList.toggle('dark');
+  localStorage.setItem('theme', isDark ? 'dark' : 'light');
+}
+
+(function initTheme() {
+  if (localStorage.getItem('theme') === 'dark') {
+    document.body.classList.add('dark');
+  }
+})();
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
 (async () => {

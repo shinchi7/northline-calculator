@@ -142,6 +142,20 @@
       top: 74px;
     }
 
+    @media (max-width: 700px) {
+      .calc-layout {
+        flex-direction: column;
+        gap: 16px;
+      }
+
+      .calc-left  { order: 1; max-width: 100%; width: 100%; }
+      .calc-right { order: 2; width: 100%; position: static; }
+      .calc-quote { order: 3; width: 100%; position: static; min-width: 0; }
+
+      .calc-right .card,
+      .calc-quote .card { max-width: 100%; }
+    }
+
     .quote-title {
       font-size: 0.68rem;
       font-weight: 700;

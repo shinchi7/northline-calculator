@@ -1205,6 +1205,76 @@ function updateQuote() {
 
     quoteEl.innerHTML = lines.map(l => `<div class="quote-line">${l}</div>`).join('');
   }
+
+  if (product === 'booklet') {
+    const qty          = document.getElementById('qty')?.value       || '';
+    const openW        = document.getElementById('open_w')?.value    || '';
+    const openH        = document.getElementById('open_h')?.value    || '';
+    const closedW      = document.getElementById('closed_w')?.value  || '';
+    const closedH      = document.getElementById('closed_h')?.value  || '';
+    const printedPages = document.getElementById('printed_pages')?.value || '';
+
+    // Cover
+    const coverPaperId  = document.getElementById('cover_paper')?.value;
+    const coverPaper    = papers.find(p => p.id === coverPaperId);
+    const coverColours  = parseInt(document.querySelector('input[name="cover_colours"]:checked')?.value) || 0;
+    const coverSides    = parseInt(document.querySelector('input[name="cover_sides"]:checked')?.value)   || 0;
+    let coverColourStr  = '';
+    if (coverSides === 0)      coverColourStr = 'N.A.';
+    else if (coverSides === 1) coverColourStr = `${coverColours}C x 0C`;
+    else if (coverSides === 2) coverColourStr = `${coverColours}C x ${coverColours}C`;
+    const coverLamType  = document.getElementById('cover_lam_type')?.value || '';
+    const coverLamSides = document.getElementById('cover_lam')?.value      || '';
+    const coverLamStr   = (coverLamSides && coverLamSides !== 'None')
+                          ? `${coverLamType} ${coverLamSides}`.trim() : 'None';
+
+    // Content
+    const contentPaperId  = document.getElementById('content_paper')?.value;
+    const contentPaper    = papers.find(p => p.id === contentPaperId);
+    const contentColours  = parseInt(document.querySelector('input[name="content_colours"]:checked')?.value) || 0;
+    const contentSides    = parseInt(document.querySelector('input[name="content_sides"]:checked')?.value)   || 0;
+    let contentColourStr  = '';
+    if (contentSides === 0)      contentColourStr = 'N.A.';
+    else if (contentSides === 1) contentColourStr = `${contentColours}C x 0C`;
+    else if (contentSides === 2) contentColourStr = `${contentColours}C x ${contentColours}C`;
+    const contentLamType  = document.getElementById('content_lam_type')?.value || '';
+    const contentLamSides = document.getElementById('content_lam')?.value      || '';
+    const contentLamStr   = (contentLamSides && contentLamSides !== 'None')
+                            ? `${contentLamType} ${contentLamSides}`.trim() : 'None';
+
+    // Binding & price
+    const bindingType   = document.querySelector('input[name="binding"]:checked')?.value || '';
+    const price         = document.getElementById('price-output')?.textContent || '—';
+    const pricePerUnit  = document.getElementById('price-per-unit')?.textContent || '';
+
+    const coverPrintedPages = coverSides === 2 ? '4pp' : coverSides === 1 ? '2pp' : '';
+
+    const heading = `<strong><u>${projectName ? projectName + ' ' : ''}Booklet</u></strong>`;
+    const lines = [
+      heading,
+      openW && openH     ? `Open Size: ${openW}mm x ${openH}mm`       : '',
+      closedW && closedH ? `Closed Size: ${closedW}mm x ${closedH}mm` : '',
+      '',
+      '<strong>Cover</strong>',
+      coverPaper             ? `Paper: ${coverPaper.name}`             : '',
+      coverPrintedPages      ? `Printed Pages: ${coverPrintedPages}`   : '',
+      coverColourStr         ? `Colour: ${coverColourStr}`             : '',
+      `Lamination: ${coverLamStr}`,
+      '',
+      '<strong>Content</strong>',
+      contentPaper           ? `Paper: ${contentPaper.name}`           : '',
+      printedPages           ? `Printed Pages: ${printedPages}pp`      : '',
+      contentColourStr       ? `Colour: ${contentColourStr}`           : '',
+      `Lamination: ${contentLamStr}`,
+      '',
+      bindingType        ? `Binding: ${bindingType}`                   : '',
+      qty                ? `Quantity: ${qty}`                           : '',
+      price !== '—'      ? `Suggested Selling Price: $${price}`        : '',
+      pricePerUnit       ? pricePerUnit                                 : '',
+    ].filter(l => l !== undefined);
+
+    quoteEl.innerHTML = lines.map(l => `<div class="quote-line">${l}</div>`).join('');
+  }
 }
 
 function copyQuote() {

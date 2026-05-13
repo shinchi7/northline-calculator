@@ -505,6 +505,7 @@
           <div class="price-label">Suggested Selling Price</div>
           <div class="price-value" id="price-output">—</div>
           <div class="price-note"  id="price-note"></div>
+          <div class="price-note"  id="price-per-unit" style="margin-top:4px;font-size:0.8rem;color:#666;"></div>
         </div>
       </div>
     </div>
@@ -1150,6 +1151,7 @@ function calculateBooklet() {
 
   const suggestedPrice = coverTotal * 2 + contentTotal * 2 + 20 + bindingTotal;
   document.getElementById('price-output').textContent = suggestedPrice.toFixed(2);
+  document.getElementById('price-per-unit').textContent = qty > 0 ? `$${(suggestedPrice / qty).toFixed(2)} per booklet` : '';
 
   updateQuote();
 }
